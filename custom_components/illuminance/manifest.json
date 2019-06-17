@@ -1,0 +1,10 @@
+{
+  "domain": "illuminance",
+  "name": "Illuminance",
+  "documentation": "https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md",
+  "requirements": [],
+  "dependencies": [],
+  "codeowners": [
+    "@pnbruckner"
+  ]
+}
