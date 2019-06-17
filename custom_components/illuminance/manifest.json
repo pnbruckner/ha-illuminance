@@ -1,7 +1,7 @@
 {
   "domain": "illuminance",
   "name": "Illuminance",
-  "documentation": "https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md",
+  "documentation": "https://github.com/pnbruckner/ha-illuminance/raw/master/README.md",
   "requirements": [],
   "dependencies": [],
   "codeowners": [

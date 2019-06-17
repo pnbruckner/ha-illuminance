@@ -1,11 +1,9 @@
 """
+Illuminance Sensor.
+
 A Sensor platform that estimates outdoor illuminance from Weather Underground,
 YR or Dark Sky current conditions.
-
-For more details about this platform, please refer to
-https://github.com/pnbruckner/homeassistant-config#illuminance-sensor
 """
-
 import asyncio
 import datetime as dt
 import logging
@@ -15,33 +13,12 @@ import async_timeout
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    DOMAIN as SENSOR_DOMAIN, PLATFORM_SCHEMA, SCAN_INTERVAL)
-try:
-    from homeassistant.components.darksky.sensor import (
-        ATTRIBUTION as DSS_ATTRIBUTION)
-except ImportError:
-    try:
-        from homeassistant.components.sensor.darksky import (
-            ATTRIBUTION as DSS_ATTRIBUTION)
-    except ImportError:
-        from homeassistant.components.sensor.darksky import (
-            CONF_ATTRIBUTION as DSS_ATTRIBUTION)
-try:
-    from homeassistant.components.yr.sensor import (
-        ATTRIBUTION as YRS_ATTRIBUTION)
-except ImportError:
-    try:
-        from homeassistant.components.sensor.yr import (
-            ATTRIBUTION as YRS_ATTRIBUTION)
-    except ImportError:
-        from homeassistant.components.sensor.yr import (
-            CONF_ATTRIBUTION as YRS_ATTRIBUTION)
-try:
-    from homeassistant.components.darksky.weather import (
-        ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
-except ImportError:
-    from homeassistant.components.weather.darksky import (
-        ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
+    DOMAIN as SENSOR_DOMAIN, PLATFORM_SCHEMA)
+from homeassistant.components.darksky.sensor import (
+    ATTRIBUTION as DSS_ATTRIBUTION)
+from homeassistant.components.yr.sensor import ATTRIBUTION as YRS_ATTRIBUTION
+from homeassistant.components.darksky.weather import (
+    ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
 from homeassistant.const import (
     ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_NAME,
     CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_START)
@@ -49,8 +26,7 @@ from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import (
-    async_track_state_change, async_track_time_change)
+from homeassistant.helpers.event import async_track_state_change
 from homeassistant.helpers.sun import get_astral_event_date
 import homeassistant.util.dt as dt_util
 
@@ -59,26 +35,26 @@ MIN_SCAN_INTERVAL = dt.timedelta(minutes=5)
 DEFAULT_SCAN_INTERVAL = dt.timedelta(minutes=5)
 
 WU_MAPPING = (
-    (  200, ('tstorms',)),
-    ( 1000, ('cloudy', 'fog', 'rain', 'sleet', 'snow', 'flurries',
-             'chanceflurries', 'chancerain', 'chancesleet', 
-             'chancesnow','chancetstorms')),
-    ( 2500, ('mostlycloudy',)),
-    ( 7500, ('partlysunny', 'partlycloudy', 'mostlysunny', 'hazy')),
+    (200, ('tstorms',)),
+    (1000, ('cloudy', 'fog', 'rain', 'sleet', 'snow', 'flurries',
+            'chanceflurries', 'chancerain', 'chancesleet',
+            'chancesnow', 'chancetstorms')),
+    (2500, ('mostlycloudy',)),
+    (7500, ('partlysunny', 'partlycloudy', 'mostlysunny', 'hazy')),
     (10000, ('sunny', 'clear')))
 YR_MAPPING = (
-    (  200, (6, 11, 14, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-             33, 34)),
-    ( 1000, (5, 7, 8, 9, 10, 12, 13, 15, 40, 41, 42, 43, 44, 45, 46, 47, 48,
-             49, 50)),
-    ( 2500, (4, )),
-    ( 7500, (2, 3)),
+    (200, (6, 11, 14, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+           33, 34)),
+    (1000, (5, 7, 8, 9, 10, 12, 13, 15, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+            49, 50)),
+    (2500, (4, )),
+    (7500, (2, 3)),
     (10000, (1, )))
 DARKSKY_MAPPING = (
-    (  200, ('hail', 'lightning')),
-    ( 1000, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
-    ( 2500, ('cloudy', )),
-    ( 7500, ('partlycloudy', )),
+    (200, ('hail', 'lightning')),
+    (1000, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
+    (2500, ('cloudy', )),
+    (7500, ('partlycloudy', )),
     (10000, ('clear-night', 'sunny', 'windy')))
 
 CONF_QUERY = 'query'
@@ -118,14 +94,16 @@ async def _async_get_wu_data(hass, session, api_key, features, query):
             raise ValueError('Error from api.wunderground.com: {}'.format(
                 resp['response']['error']['description']))
     except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
-        _LOGGER.error('{}: {}'.format(exc.__class__.__name__, str(exc)))
+        _LOGGER.error('%s: %s', exc.__class__.__name__, exc)
         return None
 
     return resp
 
 
+# pylint: disable=unused-argument
 async def async_setup_platform(hass, config, async_add_entities,
                                discovery_info=None):
+    """Set up platform."""
     using_wu = CONF_API_KEY in config
     session = None
     if using_wu:
@@ -137,8 +115,12 @@ async def async_setup_platform(hass, config, async_add_entities,
     async_add_entities([IlluminanceSensor(using_wu, config, session)], True)
 
 
+# pylint: disable=too-many-instance-attributes
 class IlluminanceSensor(Entity):
+    """Illuminance sensor."""
+
     def __init__(self, using_wu, config, session):
+        """Initialize."""
         self._using_wu = using_wu
         if using_wu:
             self._api_key = config[CONF_API_KEY]
@@ -154,16 +136,19 @@ class IlluminanceSensor(Entity):
         self._was_changing = False
 
     async def async_added_to_hass(self):
+        """Update after HA has started."""
         if self._using_wu:
             return
 
         @callback
+        # pylint: disable=unused-argument
         def sensor_state_listener(entity, old_state, new_state):
             if new_state and (not old_state or
                               new_state.state != old_state.state):
                 self.async_schedule_update_ha_state(True)
 
         @callback
+        # pylint: disable=unused-argument
         def sensor_startup(event):
             self._init_complete = True
 
@@ -179,6 +164,7 @@ class IlluminanceSensor(Entity):
 
     @property
     def should_poll(self):
+        """Return if should poll for status."""
         # For the system (i.e., EntityPlatform) to configure itself to
         # periodically call our async_update method any call to this method
         # during initializaton must return True. After that, for WU we'll
@@ -187,7 +173,7 @@ class IlluminanceSensor(Entity):
         # when period is done to make sure ramping is completed.
         if not self._init_complete or self._using_wu:
             return True
-        changing = 0 < self.sun_factor(dt_util.now()) < 1
+        changing = 0 < self._sun_factor(dt_util.now()) < 1
         if changing:
             self._was_changing = True
             return True
@@ -198,28 +184,34 @@ class IlluminanceSensor(Entity):
 
     @property
     def name(self):
+        """Return name."""
         return self._name
 
     @property
     def state(self):
+        """Return state."""
         return self._state
 
     @property
     def device_state_attributes(self):
+        """Return device attributes."""
         if self._using_wu:
             attrs = {ATTR_CONDITIONS: self._conditions}
             return attrs
-        else:
-            return None
+        return None
 
     @property
     def unit_of_measurement(self):
+        """Return unit of measurement."""
         return 'lx'
 
+    # pylint: disable=too-many-return-statements
+    # pylint: disable=too-many-branches
     async def async_update(self):
-        _LOGGER.debug('Updating {}'.format(self._name))
+        """Update state."""
+        _LOGGER.debug('Updating %s', self._name)
 
-        sun_factor = self.sun_factor(dt_util.now())
+        sun_factor = self._sun_factor(dt_util.now())
 
         # No point in getting conditions because estimated illuminance derived
         # from it will just be multiplied by zero. I.e., it's nighttime.
@@ -246,14 +238,13 @@ class IlluminanceSensor(Entity):
                 # chance to initialize then we won't find its state. Don't log
                 # that as an error.
                 if self._init_complete:
-                    _LOGGER.error('State not found: {}'.format(
-                        self._entity_id))
+                    _LOGGER.error('State not found: %s', self._entity_id)
                 return
             attribution = state.attributes.get(ATTR_ATTRIBUTION)
             if not attribution:
                 if self._init_complete:
-                    _LOGGER.error('No {} attribute: {}'.format(
-                        ATTR_ATTRIBUTION, self._entity_id))
+                    _LOGGER.error('No %s attribute: %s',
+                                  ATTR_ATTRIBUTION, self._entity_id)
                 return
             raw_conditions = state.state
             if attribution in (DSS_ATTRIBUTION, DSW_ATTRIBUTION):
@@ -267,31 +258,29 @@ class IlluminanceSensor(Entity):
                     conditions = int(raw_conditions)
                 except (TypeError, ValueError):
                     if self._init_complete:
-                        _LOGGER.error(
-                            'State of YR sensor not a number: {}'
-                            .format(self._entity_id))
+                        _LOGGER.error('State of YR sensor not a number: %s',
+                                      self._entity_id)
                     return
                 mapping = YR_MAPPING
             else:
                 if self._init_complete:
-                    _LOGGER.error('Unsupported sensor: {}'.format(
-                        self._entity_id))
+                    _LOGGER.error('Unsupported sensor: %s', self._entity_id)
                 return
 
         illuminance = 0
-        for i, c in mapping:
-            if conditions in c:
-                illuminance = i
+        for illum, cond in mapping:
+            if conditions in cond:
+                illuminance = illum
                 break
         if illuminance == 0:
             if self._init_complete:
-                _LOGGER.error('Unexpected current observation: {}'.format(
-                    raw_conditions))
+                _LOGGER.error('Unexpected current observation: %s',
+                              raw_conditions)
             return
 
         self._state = round(illuminance * sun_factor)
 
-    def sun_factor(self, now):
+    def _sun_factor(self, now):
         now_date = now.date()
 
         if self._sun_data and self._sun_data[0] == now_date:
@@ -317,6 +306,5 @@ class IlluminanceSensor(Entity):
         if now <= sunrise_end:
             # Sunrise
             return (now-sunrise_begin).total_seconds() / (60*60)
-        else:
-            # Sunset
-            return (sunset_end-now).total_seconds() / (60*60)
+        # Sunset
+        return (sunset_end-now).total_seconds() / (60*60)
