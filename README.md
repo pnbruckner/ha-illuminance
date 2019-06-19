@@ -20,7 +20,7 @@ sensor:
     entity_id: sensor.yr_symbol
 ```
 ### HACS
-See [HACS](https://github.com/custom-components/hacs), especially [Add custom repos](https://custom-components.github.io/hacs/#add-custom-repos).
+See [HACS](https://github.com/custom-components/hacs), especially the **Add custom repositories** section on [this page](https://custom-components.github.io/hacs/usage/settings/).
 ### Manual
 Alternatively, place a copy of:
 
