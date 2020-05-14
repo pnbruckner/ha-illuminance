@@ -11,18 +11,16 @@ The following sources of weather data are supported:
 * [Dark Sky Weather](https://www.home-assistant.io/components/weather.darksky/)
 * Weather Underground
 * [YR (symbol)](https://www.home-assistant.io/components/sensor.yr/)
-## Installation
-Follow either the HACS or manual installation instructions below.
+
+Follow the installation instructions below.
 Then add the desired configuration. Here is an example of a typical configuration:
 ```yaml
 sensor:
   - platform: illuminance
     entity_id: sensor.yr_symbol
 ```
-### HACS
-See [HACS](https://github.com/custom-components/hacs), especially the **Add custom repositories** section on [this page](https://custom-components.github.io/hacs/usage/settings/).
-### Manual
-Alternatively, place a copy of:
+## Installation
+Place a copy of:
 
 [`__init__.py`](custom_components/illuminance/__init__.py) at `<config>/custom_components/illuminance/__init__.py`  
 [`sensor.py`](custom_components/illuminance/sensor.py) at `<config>/custom_components/illuminance/sensor.py`  
