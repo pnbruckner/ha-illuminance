@@ -1,8 +1,7 @@
 """
 Illuminance Sensor.
 
-A Sensor platform that estimates outdoor illuminance from Weather Underground,
-YR or Dark Sky current conditions.
+A Sensor platform that estimates outdoor illuminance from Weather Underground or YR current conditions.
 """
 import asyncio
 import datetime as dt
@@ -14,11 +13,7 @@ import voluptuous as vol
 
 from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN, PLATFORM_SCHEMA)
-from homeassistant.components.darksky.sensor import (
-    ATTRIBUTION as DSS_ATTRIBUTION)
 from homeassistant.components.yr.sensor import ATTRIBUTION as YRS_ATTRIBUTION
-from homeassistant.components.darksky.weather import (
-    ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
 from homeassistant.const import (
     ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_NAME,
     CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_START)
@@ -50,12 +45,6 @@ YR_MAPPING = (
     (2500, (4, )),
     (7500, (2, 3)),
     (10000, (1, )))
-DARKSKY_MAPPING = (
-    (200, ('hail', 'lightning')),
-    (1000, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
-    (2500, ('cloudy', )),
-    (7500, ('partlycloudy', )),
-    (10000, ('clear-night', 'sunny', 'windy')))
 
 CONF_QUERY = 'query'
 
@@ -167,7 +156,7 @@ class IlluminanceSensor(Entity):
         """Return if should poll for status."""
         # For the system (i.e., EntityPlatform) to configure itself to
         # periodically call our async_update method any call to this method
-        # during initializaton must return True. After that, for WU we'll
+        # during initialization must return True. After that, for WU we'll
         # always poll, and for others we'll only need to poll during the ramp
         # up and down periods around sunrise and sunset, and then once more
         # when period is done to make sure ramping is completed.
@@ -247,13 +236,7 @@ class IlluminanceSensor(Entity):
                                   ATTR_ATTRIBUTION, self._entity_id)
                 return
             raw_conditions = state.state
-            if attribution in (DSS_ATTRIBUTION, DSW_ATTRIBUTION):
-                if state.domain == SENSOR_DOMAIN:
-                    conditions = DSW_MAP_CONDITION.get(raw_conditions)
-                else:
-                    conditions = raw_conditions
-                mapping = DARKSKY_MAPPING
-            elif attribution == YRS_ATTRIBUTION:
+            if attribution == YRS_ATTRIBUTION:
                 try:
                     conditions = int(raw_conditions)
                 except (TypeError, ValueError):
