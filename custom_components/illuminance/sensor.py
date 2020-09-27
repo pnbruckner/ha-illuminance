@@ -16,7 +16,6 @@ from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN, PLATFORM_SCHEMA)
 from homeassistant.components.darksky.sensor import (
     ATTRIBUTION as DSS_ATTRIBUTION)
-from homeassistant.components.yr.sensor import ATTRIBUTION as YRS_ATTRIBUTION
 from homeassistant.components.darksky.weather import (
     ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
 from homeassistant.const import (
