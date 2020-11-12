@@ -19,12 +19,19 @@ try:
         ATTRIBUTION as DSS_ATTRIBUTION)
 except:
     DSS_ATTRIBUTION = "no_dss"
-from homeassistant.components.yr.sensor import ATTRIBUTION as YRS_ATTRIBUTION
+try:
+    from homeassistant.components.yr.sensor import ATTRIBUTION as YRS_ATTRIBUTION
+except:
+    YRS_ATTRIBUTION = "no_yrs"
 try:
     from homeassistant.components.darksky.weather import (
         ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
 except:
     DSW_ATTRIBUTION = "no_dsw"
+try:
+    from homeassistant.components.met.weather import ATTRIBUTION as MET_ATTRIBUTION
+except:
+    MET_ATTRIBUTION = "no_met"
 from homeassistant.const import (
     ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_NAME,
     CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_START)
@@ -62,6 +69,13 @@ DARKSKY_MAPPING = (
     (2500, ('cloudy', )),
     (7500, ('partlycloudy', )),
     (10000, ('clear-night', 'sunny', 'windy')))
+MET_MAPPING = (
+    (200, ('lightning-rainy', 'pouring')),
+    (1000, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
+    (2500, ('cloudy', )),
+    (7500, ('partlycloudy', )),
+    (10000, ('clear-night', 'sunny')),
+)
 
 CONF_QUERY = 'query'
 
@@ -268,6 +282,9 @@ class IlluminanceSensor(Entity):
                                       self._entity_id)
                     return
                 mapping = YR_MAPPING
+            elif attribution == MET_ATTRIBUTION:
+                conditions = raw_conditions
+                mapping = MET_MAPPING
             else:
                 if self._init_complete:
                     _LOGGER.error('Unsupported sensor: %s', self._entity_id)
