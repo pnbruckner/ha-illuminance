@@ -14,11 +14,17 @@ import voluptuous as vol
 
 from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN, PLATFORM_SCHEMA)
-from homeassistant.components.darksky.sensor import (
-    ATTRIBUTION as DSS_ATTRIBUTION)
+try:
+    from homeassistant.components.darksky.sensor import (
+        ATTRIBUTION as DSS_ATTRIBUTION)
+except:
+    DSS_ATTRIBUTION = "no_dss"
 from homeassistant.components.yr.sensor import ATTRIBUTION as YRS_ATTRIBUTION
-from homeassistant.components.darksky.weather import (
-    ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
+try:
+    from homeassistant.components.darksky.weather import (
+        ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
+except:
+    DSW_ATTRIBUTION = "no_dsw"
 from homeassistant.const import (
     ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_NAME,
     CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_START)
