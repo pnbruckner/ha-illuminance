@@ -10,14 +10,15 @@ The following sources of weather data are supported:
 * [Dark Sky Sensor (icon)](https://www.home-assistant.io/components/sensor.darksky/)
 * [Dark Sky Weather](https://www.home-assistant.io/components/weather.darksky/)
 * Weather Underground
-* [YR (symbol)](https://www.home-assistant.io/components/sensor.yr/)
+* YR (symbol) NOTE: Removed in HA 0.115
+* [Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/)
 
 Follow the installation instructions below.
 Then add the desired configuration. Here is an example of a typical configuration:
 ```yaml
 sensor:
   - platform: illuminance
-    entity_id: sensor.yr_symbol
+    entity_id: weather.home
 ```
 ## Installation
 Place a copy of:
@@ -57,6 +58,13 @@ sensor:
   - platform: illuminance
     name: DSW Illuminance
     entity_id: weather.dark_sky
+```
+### Met.no
+```
+sensor:
+  - platform: illuminance
+    name: Met.no Illuminance
+    entity_id: weather.home
 ```
 ### YR Sensor
 ```
