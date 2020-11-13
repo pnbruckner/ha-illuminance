@@ -1,8 +1,7 @@
 """
 Illuminance Sensor.
 
-A Sensor platform that estimates outdoor illuminance from Weather Underground,
-YR or Dark Sky current conditions.
+A Sensor platform that estimates outdoor illuminance from current weather conditions.
 """
 import asyncio
 import datetime as dt
@@ -32,6 +31,10 @@ try:
     from homeassistant.components.met.weather import ATTRIBUTION as MET_ATTRIBUTION
 except:
     MET_ATTRIBUTION = "no_met"
+try:
+    from homeassistant.components.accuweather.weather import ATTRIBUTION as AW_ATTRIBUTION
+except:
+    AW_ATTRIBUTION = "no_aw"
 from homeassistant.const import (
     ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_NAME,
     CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_START)
@@ -75,6 +78,19 @@ MET_MAPPING = (
     (2500, ('cloudy', )),
     (7500, ('partlycloudy', )),
     (10000, ('clear-night', 'sunny')),
+)
+AW_MAPPING = (
+    (200, ('lightning', 'lightning-rainy', 'pouring')),
+    (1000, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'exceptional', 'windy')),
+    (2500, ('mostlycloudy', )),
+    (7500, ('partlycloudy', )),
+    (10000, ('sunny', 'clear-night')),
+)
+ECOBEE_MAPPING = (
+    (200, ('pouring', 'snowy-heavy', 'lightning-rainy')),
+    (1000, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'windy', 'tornado')),
+    (7500, ('partlycloudy', 'hazy')),
+    (10000, ('sunny', )),
 )
 
 CONF_QUERY = 'query'
@@ -187,7 +203,7 @@ class IlluminanceSensor(Entity):
         """Return if should poll for status."""
         # For the system (i.e., EntityPlatform) to configure itself to
         # periodically call our async_update method any call to this method
-        # during initializaton must return True. After that, for WU we'll
+        # during initialization must return True. After that, for WU we'll
         # always poll, and for others we'll only need to poll during the ramp
         # up and down periods around sunrise and sunset, and then once more
         # when period is done to make sure ramping is completed.
@@ -285,6 +301,12 @@ class IlluminanceSensor(Entity):
             elif attribution == MET_ATTRIBUTION:
                 conditions = raw_conditions
                 mapping = MET_MAPPING
+            elif attribution == AW_ATTRIBUTION:
+                conditions = raw_conditions
+                mapping = AW_MAPPING
+            elif 'Ecobee' in attribution:
+                conditions = raw_conditions
+                mapping = ECOBEE_MAPPING
             else:
                 if self._init_complete:
                     _LOGGER.error('Unsupported sensor: %s', self._entity_id)
