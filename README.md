@@ -12,6 +12,8 @@ The following sources of weather data are supported:
 * Weather Underground
 * YR (symbol) NOTE: Removed in HA 0.115
 * [Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/)
+* [AccuWeather](https://www.home-assistant.io/integrations/accuweather/)
+* [ecobee](https://www.home-assistant.io/integrations/ecobee/)
 
 Follow the installation instructions below.
 Then add the desired configuration. Here is an example of a typical configuration:
@@ -33,7 +35,7 @@ where `<config>` is your Home Assistant configuration directory.
 
 ## Configuration variables
 - **api_key**: Weather Underground API key. Required when using WU.
-- **entity_id**: Entity ID of Dark Sky or YR entity. See examples below. Required when using Dark Sky or YR.
+- **entity_id**: Entity ID of entity that indicates current weather conditions. See examples below. Required when not using WU.
 - **name** (*Optional*): Name of the sensor. Default is `Illuminance`.
 - **scan_interval** (*Optional*): Polling interval.  For non-WU configs only applies during ramp up period around sunrise and ramp down period around sunset. Minimum is 5 minutes. Default is 5 minutes.
 - **query**: Weather Underground query. See https://www.wunderground.com/weather/api/d/docs?d=data/index. Required when using WU.
@@ -59,11 +61,11 @@ sensor:
     name: DSW Illuminance
     entity_id: weather.dark_sky
 ```
-### Met.no
+### Met.no, AccuWeather or ecobee
 ```
 sensor:
   - platform: illuminance
-    name: Met.no Illuminance
+    name: Estimated Illuminance
     entity_id: weather.home
 ```
 ### YR Sensor
@@ -86,7 +88,5 @@ sensor:
     scan_interval:
       minutes: 30
 ```
-## Caveats
-Weather Underground no long provides free API keys. In fact, as of this writing they have notified that the REST API will be discontinued.
 ## Releases Before 2.1.0
 See https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md.
