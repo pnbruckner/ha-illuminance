@@ -1,0 +1,5 @@
+{
+  "name": "Illuminance Sensor",
+  "persistent_directory": "keep",
+  "zip_release": false
+}
