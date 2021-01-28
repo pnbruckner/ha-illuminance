@@ -14,6 +14,7 @@ The following sources of weather data are supported:
 * [Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/)
 * [AccuWeather](https://www.home-assistant.io/integrations/accuweather/)
 * [ecobee](https://www.home-assistant.io/integrations/ecobee/)
+* [Deutscher Wetterdienst](https://github.com/FL550/dwd_weather)
 
 Follow the installation instructions below.
 Then add the desired configuration. Here is an example of a typical configuration:
@@ -87,6 +88,13 @@ sensor:
     query: !secret wu_query
     scan_interval:
       minutes: 30
+```
+### Deutscher Wetterdienst
+```
+sensor:
+  - platform: illuminance
+    name: DWD Illuminance
+    entity_id: weather.dwd_weather_home
 ```
 ## Releases Before 2.1.0
 See https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md.
