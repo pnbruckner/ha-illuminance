@@ -35,6 +35,10 @@ try:
     from homeassistant.components.accuweather.weather import ATTRIBUTION as AW_ATTRIBUTION
 except:
     AW_ATTRIBUTION = "no_aw"
+try:
+    from homeassistant.components.openweathermap.weather import ATTRIBUTION as OWM_ATTRIBUTION
+except:
+    OWM_ATTRIBUTION = "no_owm"
 from homeassistant.const import (
     ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_NAME,
     CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_START)
@@ -91,6 +95,12 @@ ECOBEE_MAPPING = (
     (1000, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'windy', 'tornado')),
     (7500, ('partlycloudy', 'hazy')),
     (10000, ('sunny', )),
+)
+OWM_MAPPING = (
+    (200, ('lightning', 'lightning-rainy', 'pouring')),
+    (1000, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'exceptional', 'windy', 'windy-variant')),
+    (7500, ('partlycloudy', )),
+    (10000, ('sunny', 'clear-night')),
 )
 
 CONF_QUERY = 'query'
@@ -307,6 +317,9 @@ class IlluminanceSensor(Entity):
             elif 'Ecobee' in attribution:
                 conditions = raw_conditions
                 mapping = ECOBEE_MAPPING
+            elif attribution == OWM_ATTRIBUTION:
+                conditions = raw_conditions
+                mapping = OWM_MAPPING
             else:
                 if self._init_complete:
                     _LOGGER.error('Unsupported sensor: %s', self._entity_id)

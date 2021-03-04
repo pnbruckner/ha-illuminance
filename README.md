@@ -14,6 +14,7 @@ The following sources of weather data are supported:
 * [Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/)
 * [AccuWeather](https://www.home-assistant.io/integrations/accuweather/)
 * [ecobee](https://www.home-assistant.io/integrations/ecobee/)
+* [OpenWeatherMap](https://www.home-assistant.io/integrations/openweathermap/)
 
 Follow the installation instructions below.
 Then add the desired configuration. Here is an example of a typical configuration:
@@ -67,6 +68,13 @@ sensor:
   - platform: illuminance
     name: Estimated Illuminance
     entity_id: weather.home
+```
+### OpenWeatherMap
+```
+sensor:
+  - platform: illuminance
+    name: Estimated Illuminance
+    entity_id: weather.openweathermap
 ```
 ### YR Sensor
 ```
