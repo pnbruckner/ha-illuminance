@@ -24,6 +24,8 @@ sensor:
     entity_id: weather.home
 ```
 ## Installation
+
+### Manual
 Place a copy of:
 
 [`__init__.py`](custom_components/illuminance/__init__.py) at `<config>/custom_components/illuminance/__init__.py`  
@@ -33,6 +35,9 @@ Place a copy of:
 where `<config>` is your Home Assistant configuration directory.
 
 >__NOTE__: Do not download the file by using the link above directly. Rather, click on it, then on the page that comes up use the `Raw` button.
+
+### With HACS
+You can use [HACS](https://hacs.xyz/) to manage installation and updates by adding this repo as a [custom repository](https://hacs.xyz/docs/faq/custom_repositories/) and then searching for and installing the "Illuminance" integration.
 
 ## Configuration variables
 - **api_key**: Weather Underground API key. Required when using WU.
