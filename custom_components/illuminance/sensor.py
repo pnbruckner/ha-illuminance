@@ -6,6 +6,7 @@ A Sensor platform that estimates outdoor illuminance from current weather condit
 import asyncio
 import datetime as dt
 import logging
+from math import asin, cos, exp, radians, sin
 
 import aiohttp
 import async_timeout
@@ -40,14 +41,14 @@ try:
 except:
     OWM_ATTRIBUTION = "no_owm"
 from homeassistant.const import (
-    ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_NAME,
+    ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_MODE, CONF_NAME,
     CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_START)
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_state_change
-from homeassistant.helpers.sun import get_astral_event_date
+from homeassistant.helpers.sun import get_astral_event_date, get_astral_location
 import homeassistant.util.dt as dt_util
 
 DEFAULT_NAME = 'Illuminance'
@@ -55,52 +56,52 @@ MIN_SCAN_INTERVAL = dt.timedelta(minutes=5)
 DEFAULT_SCAN_INTERVAL = dt.timedelta(minutes=5)
 
 WU_MAPPING = (
-    (200, ('tstorms',)),
-    (1000, ('cloudy', 'fog', 'rain', 'sleet', 'snow', 'flurries',
+    (10, ('tstorms',)),
+    (5, ('cloudy', 'fog', 'rain', 'sleet', 'snow', 'flurries',
             'chanceflurries', 'chancerain', 'chancesleet',
             'chancesnow', 'chancetstorms')),
-    (2500, ('mostlycloudy',)),
-    (7500, ('partlysunny', 'partlycloudy', 'mostlysunny', 'hazy')),
-    (10000, ('sunny', 'clear')))
+    (3, ('mostlycloudy',)),
+    (2, ('partlysunny', 'partlycloudy', 'mostlysunny', 'hazy')),
+    (1, ('sunny', 'clear')))
 YR_MAPPING = (
-    (200, (6, 11, 14, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
+    (10, (6, 11, 14, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
            33, 34)),
-    (1000, (5, 7, 8, 9, 10, 12, 13, 15, 40, 41, 42, 43, 44, 45, 46, 47, 48,
+    (5, (5, 7, 8, 9, 10, 12, 13, 15, 40, 41, 42, 43, 44, 45, 46, 47, 48,
             49, 50)),
-    (2500, (4, )),
-    (7500, (2, 3)),
-    (10000, (1, )))
+    (3, (4, )),
+    (2, (2, 3)),
+    (1, (1, )))
 DARKSKY_MAPPING = (
-    (200, ('hail', 'lightning')),
-    (1000, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
-    (2500, ('cloudy', )),
-    (7500, ('partlycloudy', )),
-    (10000, ('clear-night', 'sunny', 'windy')))
+    (10, ('hail', 'lightning')),
+    (5, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
+    (3, ('cloudy', )),
+    (2, ('partlycloudy', )),
+    (1, ('clear-night', 'sunny', 'windy')))
 MET_MAPPING = (
-    (200, ('lightning-rainy', 'pouring')),
-    (1000, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
-    (2500, ('cloudy', )),
-    (7500, ('partlycloudy', )),
-    (10000, ('clear-night', 'sunny')),
+    (10, ('lightning-rainy', 'pouring')),
+    (5, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
+    (3, ('cloudy', )),
+    (2, ('partlycloudy', )),
+    (1, ('clear-night', 'sunny')),
 )
 AW_MAPPING = (
-    (200, ('lightning', 'lightning-rainy', 'pouring')),
-    (1000, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'exceptional', 'windy')),
-    (2500, ('mostlycloudy', )),
-    (7500, ('partlycloudy', )),
-    (10000, ('sunny', 'clear-night')),
+    (10, ('lightning', 'lightning-rainy', 'pouring')),
+    (5, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'exceptional', 'windy')),
+    (3, ('mostlycloudy', )),
+    (2, ('partlycloudy', )),
+    (1, ('sunny', 'clear-night')),
 )
 ECOBEE_MAPPING = (
-    (200, ('pouring', 'snowy-heavy', 'lightning-rainy')),
-    (1000, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'windy', 'tornado')),
-    (7500, ('partlycloudy', 'hazy')),
-    (10000, ('sunny', )),
+    (10, ('pouring', 'snowy-heavy', 'lightning-rainy')),
+    (5, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'windy', 'tornado')),
+    (2, ('partlycloudy', 'hazy')),
+    (1, ('sunny', )),
 )
 OWM_MAPPING = (
-    (200, ('lightning', 'lightning-rainy', 'pouring')),
-    (1000, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'exceptional', 'windy', 'windy-variant')),
-    (7500, ('partlycloudy', )),
-    (10000, ('sunny', 'clear-night')),
+    (10, ('lightning', 'lightning-rainy', 'pouring')),
+    (5, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'exceptional', 'windy', 'windy-variant')),
+    (2, ('partlycloudy', )),
+    (1, ('sunny', 'clear-night')),
 )
 
 CONF_QUERY = 'query'
@@ -117,6 +118,7 @@ PLATFORM_SCHEMA = vol.All(
         vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL):
             vol.All(cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)),
         vol.Exclusive(CONF_ENTITY_ID, 'source'): cv.entity_id,
+        vol.Optional(CONF_MODE, default="normal"): vol.In(["normal", "simple"]),
     }),
     cv.has_at_least_one_key(CONF_API_KEY, CONF_ENTITY_ID),
     cv.key_dependency(CONF_API_KEY, CONF_QUERY),
@@ -161,6 +163,17 @@ async def async_setup_platform(hass, config, async_add_entities,
     async_add_entities([IlluminanceSensor(using_wu, config, session)], True)
 
 
+def _illumiance(elev):
+    """Calculate illuminance from sun at given elevation."""
+    elev_rad = radians(elev)
+    u = sin(elev_rad)
+    x = 753.66156
+    s = asin(x * cos(elev_rad) / (x + 1))
+    m = x * (cos(s) - u) + cos(s)
+    m = exp(-0.2 * m) * u + 0.0289 * exp(-0.042 * m) * (1 + (elev + 90) * u / 57.29577951)
+    return 133775 * m
+
+
 # pylint: disable=too-many-instance-attributes
 class IlluminanceSensor(Entity):
     """Illuminance sensor."""
@@ -180,6 +193,7 @@ class IlluminanceSensor(Entity):
         self._sun_data = None
         self._init_complete = False
         self._was_changing = False
+        self._mode = config[CONF_MODE]
 
     async def async_added_to_hass(self):
         """Update after HA has started."""
@@ -213,11 +227,12 @@ class IlluminanceSensor(Entity):
         """Return if should poll for status."""
         # For the system (i.e., EntityPlatform) to configure itself to
         # periodically call our async_update method any call to this method
-        # during initialization must return True. After that, for WU we'll
-        # always poll, and for others we'll only need to poll during the ramp
+        # during initialization must return True. After that, when using normal
+        # mode or for WU we'll always poll, and for simple mode with other
+        # weather sources we'll only need to poll during the ramp
         # up and down periods around sunrise and sunset, and then once more
         # when period is done to make sure ramping is completed.
-        if not self._init_complete or self._using_wu:
+        if not self._init_complete or self._mode == "normal" or self._using_wu:
             return True
         changing = 0 < self._sun_factor(dt_util.now()) < 1
         if changing:
@@ -249,7 +264,7 @@ class IlluminanceSensor(Entity):
     @property
     def unit_of_measurement(self):
         """Return unit of measurement."""
-        return 'lx'
+        return 'lux'
 
     # pylint: disable=too-many-return-statements
     # pylint: disable=too-many-branches
@@ -257,13 +272,16 @@ class IlluminanceSensor(Entity):
         """Update state."""
         _LOGGER.debug('Updating %s', self._name)
 
-        sun_factor = self._sun_factor(dt_util.now())
+        now = dt_util.now().replace(microsecond=0)
 
-        # No point in getting conditions because estimated illuminance derived
-        # from it will just be multiplied by zero. I.e., it's nighttime.
-        if sun_factor == 0:
-            self._state = 10
-            return
+        if self._mode == "simple":
+            sun_factor = self._sun_factor(now)
+
+            # No point in getting conditions because estimated illuminance derived
+            # from it will just be multiplied by zero. I.e., it's nighttime.
+            if sun_factor == 0:
+                self._state = 10
+                return
 
         if self._using_wu:
             features = ['conditions']
@@ -325,18 +343,28 @@ class IlluminanceSensor(Entity):
                     _LOGGER.error('Unsupported sensor: %s', self._entity_id)
                 return
 
-        illuminance = 0
-        for illum, cond in mapping:
-            if conditions in cond:
-                illuminance = illum
+        sk = None
+        for _sk, _conditions in mapping:
+            if conditions in _conditions:
+                sk = _sk
                 break
-        if illuminance == 0:
+        if not sk:
             if self._init_complete:
                 _LOGGER.error('Unexpected current observation: %s',
                               raw_conditions)
             return
 
-        self._state = round(illuminance * sun_factor)
+        if self._mode == "simple":
+            illuminance = 10000 * sun_factor
+        else:
+            try:
+                location, elevation = get_astral_location(self.hass)
+                solar_elevation = location.solar_elevation(now, elevation)
+            except TypeError:
+                location = get_astral_location(self.hass)
+                solar_elevation = location.solar_elevation(now)
+            illuminance = _illumiance(solar_elevation)
+        self._state = round(illuminance / sk)
 
     def _sun_factor(self, now):
         now_date = now.date()
