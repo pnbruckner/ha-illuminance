@@ -3,13 +3,10 @@ Illuminance Sensor.
 
 A Sensor platform that estimates outdoor illuminance from current weather conditions.
 """
-import asyncio
 import datetime as dt
 import logging
 from math import asin, cos, exp, radians, sin
 
-import aiohttp
-import async_timeout
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
@@ -19,10 +16,6 @@ try:
         ATTRIBUTION as DSS_ATTRIBUTION)
 except:
     DSS_ATTRIBUTION = "no_dss"
-try:
-    from homeassistant.components.yr.sensor import ATTRIBUTION as YRS_ATTRIBUTION
-except:
-    YRS_ATTRIBUTION = "no_yrs"
 try:
     from homeassistant.components.darksky.weather import (
         ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
@@ -41,13 +34,12 @@ try:
 except:
     OWM_ATTRIBUTION = "no_owm"
 from homeassistant.const import (
-    ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_MODE, CONF_NAME,
-    CONF_SCAN_INTERVAL, EVENT_CORE_CONFIG_UPDATE, EVENT_HOMEASSISTANT_START)
+    ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_MODE, CONF_NAME,
+    CONF_SCAN_INTERVAL, EVENT_CORE_CONFIG_UPDATE, LIGHT_LUX)
 from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.event import async_track_state_change
+from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.sun import get_astral_location
 import homeassistant.util.dt as dt_util
 
@@ -55,22 +47,6 @@ DEFAULT_NAME = 'Illuminance'
 MIN_SCAN_INTERVAL = dt.timedelta(minutes=5)
 DEFAULT_SCAN_INTERVAL = dt.timedelta(minutes=5)
 
-WU_MAPPING = (
-    (10, ('tstorms',)),
-    (5, ('cloudy', 'fog', 'rain', 'sleet', 'snow', 'flurries',
-            'chanceflurries', 'chancerain', 'chancesleet',
-            'chancesnow', 'chancetstorms')),
-    (3, ('mostlycloudy',)),
-    (2, ('partlysunny', 'partlycloudy', 'mostlysunny', 'hazy')),
-    (1, ('sunny', 'clear')))
-YR_MAPPING = (
-    (10, (6, 11, 14, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-           33, 34)),
-    (5, (5, 7, 8, 9, 10, 12, 13, 15, 40, 41, 42, 43, 44, 45, 46, 47, 48,
-            49, 50)),
-    (3, (4, )),
-    (2, (2, 3)),
-    (1, (1, )))
 DARKSKY_MAPPING = (
     (10, ('hail', 'lightning')),
     (5, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
@@ -104,63 +80,30 @@ OWM_MAPPING = (
     (1, ('sunny', 'clear-night')),
 )
 
-CONF_QUERY = 'query'
-
-ATTR_CONDITIONS = 'conditions'
-
 _LOGGER = logging.getLogger(__name__)
 
-PLATFORM_SCHEMA = vol.All(
-    PLATFORM_SCHEMA.extend({
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Exclusive(CONF_API_KEY, 'source'): cv.string,
-        vol.Optional(CONF_QUERY): cv.string,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL):
-            vol.All(cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)),
-        vol.Exclusive(CONF_ENTITY_ID, 'source'): cv.entity_id,
-        vol.Optional(CONF_MODE, default="normal"): vol.In(["normal", "simple"]),
-    }),
-    cv.has_at_least_one_key(CONF_API_KEY, CONF_ENTITY_ID),
-    cv.key_dependency(CONF_API_KEY, CONF_QUERY),
-)
+MODE_NORMAL = "normal"
+MODE_SIMPLE = "simple"
+MODES = (MODE_NORMAL, MODE_SIMPLE)
 
-_WU_API_URL = 'http://api.wunderground.com/api/'\
-              '{api_key}/{features}/q/{query}.json'
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
+    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL):
+        vol.All(cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)),
+    vol.Required(CONF_ENTITY_ID): cv.entity_id,
+    vol.Optional(CONF_MODE, default=MODE_NORMAL): vol.In(MODES),
+})
 
 _20_MIN = dt.timedelta(minutes=20)
 _40_MIN = dt.timedelta(minutes=40)
 
 
-async def _async_get_wu_data(hass, session, api_key, features, query):
-    try:
-        with async_timeout.timeout(9, loop=hass.loop):
-            resp = await session.get(_WU_API_URL.format(
-                api_key=api_key, features='/'.join(features), query=query))
-        resp.raise_for_status()
-        resp = await resp.json()
-        if 'error' in resp['response']:
-            raise ValueError('Error from api.wunderground.com: {}'.format(
-                resp['response']['error']['description']))
-    except (aiohttp.ClientError, asyncio.TimeoutError, ValueError) as exc:
-        _LOGGER.error('%s: %s', exc.__class__.__name__, exc)
-        return None
-
-    return resp
-
-
-# pylint: disable=unused-argument
 async def async_setup_platform(hass, config, async_add_entities,
                                discovery_info=None):
     """Set up platform."""
-    using_wu = CONF_API_KEY in config
-    session = None
-    if using_wu:
-        session = async_get_clientsession(hass)
-        if not await _async_get_wu_data(
-                hass, session, config[CONF_API_KEY], [], config[CONF_QUERY]):
-            return False
 
     def get_loc_elev(event=None):
+        """Get HA Location object & elevation."""
         try:
             loc, elev = get_astral_location(hass)
         except TypeError:
@@ -172,7 +115,7 @@ async def async_setup_platform(hass, config, async_add_entities,
         get_loc_elev()
         hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, get_loc_elev)
 
-    async_add_entities([IlluminanceSensor(using_wu, config, session)], False)
+    async_add_entities([IlluminanceSensor(config)], True)
 
 
 def _illumiance(elev):
@@ -186,74 +129,38 @@ def _illumiance(elev):
     return 133775 * m
 
 
-# pylint: disable=too-many-instance-attributes
 class IlluminanceSensor(Entity):
     """Illuminance sensor."""
 
-    def __init__(self, using_wu, config, session):
+    def __init__(self, config):
         """Initialize."""
-        self._using_wu = using_wu
-        if using_wu:
-            self._api_key = config[CONF_API_KEY]
-            self._query = config[CONF_QUERY]
-            self._session = session
-            self._conditions = None
-        else:
-            self._entity_id = config[CONF_ENTITY_ID]
+        self._entity_id = config[CONF_ENTITY_ID]
         self._name = config[CONF_NAME]
-        self._state = None
-        self._sun_data = None
-        self._init_complete = False
-        self._was_changing = False
         self._mode = config[CONF_MODE]
+        if self._mode == MODE_SIMPLE:
+            self._sun_data = None
+        self._state = None
+        self._unsub = None
 
     async def async_added_to_hass(self):
-        """Update after HA has started."""
-        if self._using_wu:
-            return
+        """Run when entity about to be added to hass."""
 
         @callback
-        # pylint: disable=unused-argument
-        def sensor_state_listener(entity, old_state, new_state):
-            if new_state and (not old_state or
-                              new_state.state != old_state.state):
+        def sensor_state_listener(event):
+            new_state = event.data["new_state"]
+            old_state = event.data["old_state"]
+            if new_state and (not old_state or new_state.state != old_state.state):
                 self.async_schedule_update_ha_state(True)
 
-        @callback
-        # pylint: disable=unused-argument
-        def sensor_startup(event):
-            self._init_complete = True
+        # Update whenever source entity changes.
+        self._unsub = async_track_state_change_event(
+            self.hass, self._entity_id, sensor_state_listener)
 
-            # Update whenever source entity changes.
-            async_track_state_change(
-                self.hass, self._entity_id, sensor_state_listener)
-
-            # Update now that source entity has had a chance to initialize.
-            self.async_schedule_update_ha_state(True)
-
-        self.hass.bus.async_listen_once(
-            EVENT_HOMEASSISTANT_START, sensor_startup)
-
-    @property
-    def should_poll(self):
-        """Return if should poll for status."""
-        # For the system (i.e., EntityPlatform) to configure itself to
-        # periodically call our async_update method any call to this method
-        # during initialization must return True. After that, when using normal
-        # mode or for WU we'll always poll, and for simple mode with other
-        # weather sources we'll only need to poll during the ramp
-        # up and down periods around sunrise and sunset, and then once more
-        # when period is done to make sure ramping is completed.
-        if not self._init_complete or self._mode == "normal" or self._using_wu:
-            return True
-        changing = 0 < self._sun_factor(dt_util.now().replace(microsecond=0)) < 1
-        if changing:
-            self._was_changing = True
-            return True
-        if self._was_changing:
-            self._was_changing = False
-            return True
-        return False
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity will be removed from hass."""
+        if self._unsub:
+            self._unsub()
+            self._unsub = None
 
     @property
     def name(self):
@@ -266,27 +173,17 @@ class IlluminanceSensor(Entity):
         return self._state
 
     @property
-    def device_state_attributes(self):
-        """Return device attributes."""
-        if self._using_wu:
-            attrs = {ATTR_CONDITIONS: self._conditions}
-            return attrs
-        return None
-
-    @property
     def unit_of_measurement(self):
         """Return unit of measurement."""
-        return 'lux'
+        return LIGHT_LUX
 
-    # pylint: disable=too-many-return-statements
-    # pylint: disable=too-many-branches
     async def async_update(self):
         """Update state."""
         _LOGGER.debug('Updating %s', self._name)
 
         now = dt_util.now().replace(microsecond=0)
 
-        if self._mode == "simple":
+        if self._mode == MODE_SIMPLE:
             sun_factor = self._sun_factor(now)
 
             # No point in getting conditions because estimated illuminance derived
@@ -295,65 +192,42 @@ class IlluminanceSensor(Entity):
                 self._state = 10
                 return
 
-        if self._using_wu:
-            features = ['conditions']
+        state = self.hass.states.get(self._entity_id)
+        if state is None:
+            if self.hass.is_running:
+                _LOGGER.error('State not found: %s', self._entity_id)
+            return
 
-            resp = await _async_get_wu_data(
-                self.hass, self._session, self._api_key, features,
-                self._query)
-            if not resp:
-                return
+        attribution = state.attributes.get(ATTR_ATTRIBUTION)
+        if not attribution:
+            if self.hass.is_running:
+                _LOGGER.error('No %s attribute: %s',
+                                ATTR_ATTRIBUTION, self._entity_id)
+            return
 
-            raw_conditions = resp['current_observation']['icon']
-            conditions = self._conditions = raw_conditions
-            mapping = WU_MAPPING
-        else:
-            state = self.hass.states.get(self._entity_id)
-            if state is None:
-                # If our initialization happens before the source entity has a
-                # chance to initialize then we won't find its state. Don't log
-                # that as an error.
-                if self._init_complete:
-                    _LOGGER.error('State not found: %s', self._entity_id)
-                return
-            attribution = state.attributes.get(ATTR_ATTRIBUTION)
-            if not attribution:
-                if self._init_complete:
-                    _LOGGER.error('No %s attribute: %s',
-                                  ATTR_ATTRIBUTION, self._entity_id)
-                return
-            raw_conditions = state.state
-            if attribution in (DSS_ATTRIBUTION, DSW_ATTRIBUTION):
-                if state.domain == SENSOR_DOMAIN:
-                    conditions = DSW_MAP_CONDITION.get(raw_conditions)
-                else:
-                    conditions = raw_conditions
-                mapping = DARKSKY_MAPPING
-            elif attribution == YRS_ATTRIBUTION:
-                try:
-                    conditions = int(raw_conditions)
-                except (TypeError, ValueError):
-                    if self._init_complete:
-                        _LOGGER.error('State of YR sensor not a number: %s',
-                                      self._entity_id)
-                    return
-                mapping = YR_MAPPING
-            elif attribution == MET_ATTRIBUTION:
-                conditions = raw_conditions
-                mapping = MET_MAPPING
-            elif attribution == AW_ATTRIBUTION:
-                conditions = raw_conditions
-                mapping = AW_MAPPING
-            elif 'Ecobee' in attribution:
-                conditions = raw_conditions
-                mapping = ECOBEE_MAPPING
-            elif attribution == OWM_ATTRIBUTION:
-                conditions = raw_conditions
-                mapping = OWM_MAPPING
+        raw_conditions = state.state
+        if attribution in (DSS_ATTRIBUTION, DSW_ATTRIBUTION):
+            if state.domain == SENSOR_DOMAIN:
+                conditions = DSW_MAP_CONDITION.get(raw_conditions)
             else:
-                if self._init_complete:
-                    _LOGGER.error('Unsupported sensor: %s', self._entity_id)
-                return
+                conditions = raw_conditions
+            mapping = DARKSKY_MAPPING
+        elif attribution == MET_ATTRIBUTION:
+            conditions = raw_conditions
+            mapping = MET_MAPPING
+        elif attribution == AW_ATTRIBUTION:
+            conditions = raw_conditions
+            mapping = AW_MAPPING
+        elif 'Ecobee' in attribution:
+            conditions = raw_conditions
+            mapping = ECOBEE_MAPPING
+        elif attribution == OWM_ATTRIBUTION:
+            conditions = raw_conditions
+            mapping = OWM_MAPPING
+        else:
+            if self.hass.is_running:
+                _LOGGER.error('Unsupported sensor: %s', self._entity_id)
+            return
 
         sk = None
         for _sk, _conditions in mapping:
@@ -361,12 +235,11 @@ class IlluminanceSensor(Entity):
                 sk = _sk
                 break
         if not sk:
-            if self._init_complete:
-                _LOGGER.error('Unexpected current observation: %s',
-                              raw_conditions)
+            if self.hass.is_running:
+                _LOGGER.error('Unexpected current observation: %s', raw_conditions)
             return
 
-        if self._mode == "simple":
+        if self._mode == MODE_SIMPLE:
             illuminance = 10000 * sun_factor
         else:
             illuminance = _illumiance(self._astral_event("solar_elevation", now))
