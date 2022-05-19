@@ -141,14 +141,58 @@ class IlluminanceSensor(Entity):
             self._sun_data = None
         self._state = None
         self._unsub = None
+        self._sk_mapping = None
+        self._cd_mapping = None
 
     async def async_added_to_hass(self):
         """Run when entity about to be added to hass."""
+
+        def get_mappings(state):
+            if not state:
+                if self.hass.is_running:
+                    _LOGGER.error('%s: State not found: %s', self.name, self._entity_id)
+                return False
+            attribution = state.attributes.get(ATTR_ATTRIBUTION)
+            if not attribution:
+                _LOGGER.error(
+                    '%s: No %s attribute: %s', self.name, ATTR_ATTRIBUTION, self._entity_id
+                )
+                return False
+
+            if attribution in (DSS_ATTRIBUTION, DSW_ATTRIBUTION):
+                if state.domain == SENSOR_DOMAIN:
+                    self._cd_mapping = DSW_MAP_CONDITION
+                self._sk_mapping = DARKSKY_MAPPING
+            elif attribution == MET_ATTRIBUTION:
+                self._sk_mapping = MET_MAPPING
+            elif attribution == AW_ATTRIBUTION:
+                self._sk_mapping = AW_MAPPING
+            elif 'Ecobee' in attribution:
+                self._sk_mapping = ECOBEE_MAPPING
+            elif attribution == OWM_ATTRIBUTION:
+                self._sk_mapping = OWM_MAPPING
+            else:
+                _LOGGER.error(
+                    '%s: Unsupported sensor: %s, attribution: %s',
+                    self.name,
+                    self._entity_id,
+                    attribution,
+                )
+                return False
+
+            _LOGGER.info("%s: Supported attribution: %s", self.name, attribution)
+            return True
+
+        if not get_mappings(self.hass.states.get(self._entity_id)):
+            _LOGGER.info("%s: Waiting for %s", self.name, self._entity_id)
 
         @callback
         def sensor_state_listener(event):
             new_state = event.data["new_state"]
             old_state = event.data["old_state"]
+            if not self._sk_mapping:
+                if not get_mappings(new_state):
+                    return
             if new_state and (not old_state or new_state.state != old_state.state):
                 self.async_schedule_update_ha_state(True)
 
@@ -179,7 +223,10 @@ class IlluminanceSensor(Entity):
 
     async def async_update(self):
         """Update state."""
-        _LOGGER.debug('Updating %s', self._name)
+        if not self._sk_mapping:
+            return
+
+        _LOGGER.debug('Updating %s', self.name)
 
         now = dt_util.now().replace(microsecond=0)
 
@@ -195,48 +242,25 @@ class IlluminanceSensor(Entity):
         state = self.hass.states.get(self._entity_id)
         if state is None:
             if self.hass.is_running:
-                _LOGGER.error('State not found: %s', self._entity_id)
-            return
-
-        attribution = state.attributes.get(ATTR_ATTRIBUTION)
-        if not attribution:
-            if self.hass.is_running:
-                _LOGGER.error('No %s attribute: %s',
-                                ATTR_ATTRIBUTION, self._entity_id)
+                _LOGGER.error('%s: State not found: %s', self.name, self._entity_id)
             return
 
         raw_conditions = state.state
-        if attribution in (DSS_ATTRIBUTION, DSW_ATTRIBUTION):
-            if state.domain == SENSOR_DOMAIN:
-                conditions = DSW_MAP_CONDITION.get(raw_conditions)
-            else:
-                conditions = raw_conditions
-            mapping = DARKSKY_MAPPING
-        elif attribution == MET_ATTRIBUTION:
-            conditions = raw_conditions
-            mapping = MET_MAPPING
-        elif attribution == AW_ATTRIBUTION:
-            conditions = raw_conditions
-            mapping = AW_MAPPING
-        elif 'Ecobee' in attribution:
-            conditions = raw_conditions
-            mapping = ECOBEE_MAPPING
-        elif attribution == OWM_ATTRIBUTION:
-            conditions = raw_conditions
-            mapping = OWM_MAPPING
+        if self._cd_mapping:
+            conditions = self._cd_mapping.get(raw_conditions)
         else:
-            if self.hass.is_running:
-                _LOGGER.error('Unsupported sensor: %s', self._entity_id)
-            return
+            conditions = raw_conditions
 
         sk = None
-        for _sk, _conditions in mapping:
+        for _sk, _conditions in self._sk_mapping:
             if conditions in _conditions:
                 sk = _sk
                 break
         if not sk:
             if self.hass.is_running:
-                _LOGGER.error('Unexpected current observation: %s', raw_conditions)
+                _LOGGER.error(
+                    '%s: Unexpected current observation: %s', self.name, raw_conditions
+                )
             return
 
         if self._mode == MODE_SIMPLE:
