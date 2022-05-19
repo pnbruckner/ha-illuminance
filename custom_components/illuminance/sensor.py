@@ -9,16 +9,17 @@ from math import asin, cos, exp, radians, sin
 
 import voluptuous as vol
 
-from homeassistant.components.sensor import (
-    DOMAIN as SENSOR_DOMAIN, PLATFORM_SCHEMA)
+from homeassistant.components.sensor import DOMAIN as SENSOR_DOMAIN, PLATFORM_SCHEMA
+
 try:
-    from homeassistant.components.darksky.sensor import (
-        ATTRIBUTION as DSS_ATTRIBUTION)
+    from homeassistant.components.darksky.sensor import ATTRIBUTION as DSS_ATTRIBUTION
 except:
     DSS_ATTRIBUTION = "no_dss"
 try:
     from homeassistant.components.darksky.weather import (
-        ATTRIBUTION as DSW_ATTRIBUTION, MAP_CONDITION as DSW_MAP_CONDITION)
+        ATTRIBUTION as DSW_ATTRIBUTION,
+        MAP_CONDITION as DSW_MAP_CONDITION,
+    )
 except:
     DSW_ATTRIBUTION = "no_dsw"
 try:
@@ -26,16 +27,26 @@ try:
 except:
     MET_ATTRIBUTION = "no_met"
 try:
-    from homeassistant.components.accuweather.weather import ATTRIBUTION as AW_ATTRIBUTION
+    from homeassistant.components.accuweather.weather import (
+        ATTRIBUTION as AW_ATTRIBUTION,
+    )
 except:
     AW_ATTRIBUTION = "no_aw"
 try:
-    from homeassistant.components.openweathermap.weather import ATTRIBUTION as OWM_ATTRIBUTION
+    from homeassistant.components.openweathermap.weather import (
+        ATTRIBUTION as OWM_ATTRIBUTION,
+    )
 except:
     OWM_ATTRIBUTION = "no_owm"
 from homeassistant.const import (
-    ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_MODE, CONF_NAME,
-    CONF_SCAN_INTERVAL, EVENT_CORE_CONFIG_UPDATE, LIGHT_LUX)
+    ATTR_ATTRIBUTION,
+    CONF_ENTITY_ID,
+    CONF_MODE,
+    CONF_NAME,
+    CONF_SCAN_INTERVAL,
+    EVENT_CORE_CONFIG_UPDATE,
+    LIGHT_LUX,
+)
 from homeassistant.core import callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
@@ -43,41 +54,67 @@ from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.sun import get_astral_location
 import homeassistant.util.dt as dt_util
 
-DEFAULT_NAME = 'Illuminance'
+DEFAULT_NAME = "Illuminance"
 MIN_SCAN_INTERVAL = dt.timedelta(minutes=5)
 DEFAULT_SCAN_INTERVAL = dt.timedelta(minutes=5)
 
 DARKSKY_MAPPING = (
-    (10, ('hail', 'lightning')),
-    (5, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
-    (3, ('cloudy', )),
-    (2, ('partlycloudy', )),
-    (1, ('clear-night', 'sunny', 'windy')))
+    (10, ("hail", "lightning")),
+    (5, ("fog", "rainy", "snowy", "snowy-rainy")),
+    (3, ("cloudy",)),
+    (2, ("partlycloudy",)),
+    (1, ("clear-night", "sunny", "windy")),
+)
 MET_MAPPING = (
-    (10, ('lightning-rainy', 'pouring')),
-    (5, ('fog', 'rainy', 'snowy', 'snowy-rainy')),
-    (3, ('cloudy', )),
-    (2, ('partlycloudy', )),
-    (1, ('clear-night', 'sunny')),
+    (10, ("lightning-rainy", "pouring")),
+    (5, ("fog", "rainy", "snowy", "snowy-rainy")),
+    (3, ("cloudy",)),
+    (2, ("partlycloudy",)),
+    (1, ("clear-night", "sunny")),
 )
 AW_MAPPING = (
-    (10, ('lightning', 'lightning-rainy', 'pouring')),
-    (5, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'exceptional', 'windy')),
-    (3, ('mostlycloudy', )),
-    (2, ('partlycloudy', )),
-    (1, ('sunny', 'clear-night')),
+    (10, ("lightning", "lightning-rainy", "pouring")),
+    (
+        5,
+        (
+            "cloudy",
+            "fog",
+            "rainy",
+            "snowy",
+            "snowy-rainy",
+            "hail",
+            "exceptional",
+            "windy",
+        ),
+    ),
+    (3, ("mostlycloudy",)),
+    (2, ("partlycloudy",)),
+    (1, ("sunny", "clear-night")),
 )
 ECOBEE_MAPPING = (
-    (10, ('pouring', 'snowy-heavy', 'lightning-rainy')),
-    (5, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'windy', 'tornado')),
-    (2, ('partlycloudy', 'hazy')),
-    (1, ('sunny', )),
+    (10, ("pouring", "snowy-heavy", "lightning-rainy")),
+    (5, ("cloudy", "fog", "rainy", "snowy", "snowy-rainy", "hail", "windy", "tornado")),
+    (2, ("partlycloudy", "hazy")),
+    (1, ("sunny",)),
 )
 OWM_MAPPING = (
-    (10, ('lightning', 'lightning-rainy', 'pouring')),
-    (5, ('cloudy', 'fog', 'rainy', 'snowy', 'snowy-rainy', 'hail', 'exceptional', 'windy', 'windy-variant')),
-    (2, ('partlycloudy', )),
-    (1, ('sunny', 'clear-night')),
+    (10, ("lightning", "lightning-rainy", "pouring")),
+    (
+        5,
+        (
+            "cloudy",
+            "fog",
+            "rainy",
+            "snowy",
+            "snowy-rainy",
+            "hail",
+            "exceptional",
+            "windy",
+            "windy-variant",
+        ),
+    ),
+    (2, ("partlycloudy",)),
+    (1, ("sunny", "clear-night")),
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -86,20 +123,22 @@ MODE_NORMAL = "normal"
 MODE_SIMPLE = "simple"
 MODES = (MODE_NORMAL, MODE_SIMPLE)
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend({
-    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL):
-        vol.All(cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)),
-    vol.Required(CONF_ENTITY_ID): cv.entity_id,
-    vol.Optional(CONF_MODE, default=MODE_NORMAL): vol.In(MODES),
-})
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
+    {
+        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
+            cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)
+        ),
+        vol.Required(CONF_ENTITY_ID): cv.entity_id,
+        vol.Optional(CONF_MODE, default=MODE_NORMAL): vol.In(MODES),
+    }
+)
 
 _20_MIN = dt.timedelta(minutes=20)
 _40_MIN = dt.timedelta(minutes=40)
 
 
-async def async_setup_platform(hass, config, async_add_entities,
-                               discovery_info=None):
+async def async_setup_platform(hass, config, async_add_entities, discovery_info=None):
     """Set up platform."""
 
     def get_loc_elev(event=None):
@@ -125,7 +164,9 @@ def _illumiance(elev):
     x = 753.66156
     s = asin(x * cos(elev_rad) / (x + 1))
     m = x * (cos(s) - u) + cos(s)
-    m = exp(-0.2 * m) * u + 0.0289 * exp(-0.042 * m) * (1 + (elev + 90) * u / 57.29577951)
+    m = exp(-0.2 * m) * u + 0.0289 * exp(-0.042 * m) * (
+        1 + (elev + 90) * u / 57.29577951
+    )
     return 133775 * m
 
 
@@ -150,12 +191,15 @@ class IlluminanceSensor(Entity):
         def get_mappings(state):
             if not state:
                 if self.hass.is_running:
-                    _LOGGER.error('%s: State not found: %s', self.name, self._entity_id)
+                    _LOGGER.error("%s: State not found: %s", self.name, self._entity_id)
                 return False
             attribution = state.attributes.get(ATTR_ATTRIBUTION)
             if not attribution:
                 _LOGGER.error(
-                    '%s: No %s attribute: %s', self.name, ATTR_ATTRIBUTION, self._entity_id
+                    "%s: No %s attribute: %s",
+                    self.name,
+                    ATTR_ATTRIBUTION,
+                    self._entity_id,
                 )
                 return False
 
@@ -167,13 +211,13 @@ class IlluminanceSensor(Entity):
                 self._sk_mapping = MET_MAPPING
             elif attribution == AW_ATTRIBUTION:
                 self._sk_mapping = AW_MAPPING
-            elif 'Ecobee' in attribution:
+            elif "Ecobee" in attribution:
                 self._sk_mapping = ECOBEE_MAPPING
             elif attribution == OWM_ATTRIBUTION:
                 self._sk_mapping = OWM_MAPPING
             else:
                 _LOGGER.error(
-                    '%s: Unsupported sensor: %s, attribution: %s',
+                    "%s: Unsupported sensor: %s, attribution: %s",
                     self.name,
                     self._entity_id,
                     attribution,
@@ -198,7 +242,8 @@ class IlluminanceSensor(Entity):
 
         # Update whenever source entity changes.
         self._unsub = async_track_state_change_event(
-            self.hass, self._entity_id, sensor_state_listener)
+            self.hass, self._entity_id, sensor_state_listener
+        )
 
     async def async_will_remove_from_hass(self) -> None:
         """Run when entity will be removed from hass."""
@@ -226,7 +271,7 @@ class IlluminanceSensor(Entity):
         if not self._sk_mapping:
             return
 
-        _LOGGER.debug('Updating %s', self.name)
+        _LOGGER.debug("Updating %s", self.name)
 
         now = dt_util.now().replace(microsecond=0)
 
@@ -242,7 +287,7 @@ class IlluminanceSensor(Entity):
         state = self.hass.states.get(self._entity_id)
         if state is None:
             if self.hass.is_running:
-                _LOGGER.error('%s: State not found: %s', self.name, self._entity_id)
+                _LOGGER.error("%s: State not found: %s", self.name, self._entity_id)
             return
 
         raw_conditions = state.state
@@ -259,7 +304,7 @@ class IlluminanceSensor(Entity):
         if not sk:
             if self.hass.is_running:
                 _LOGGER.error(
-                    '%s: Unexpected current observation: %s', self.name, raw_conditions
+                    "%s: Unexpected current observation: %s", self.name, raw_conditions
                 )
             return
 
@@ -279,18 +324,18 @@ class IlluminanceSensor(Entity):
         now_date = now.date()
 
         if self._sun_data and self._sun_data[0] == now_date:
-            (sunrise_begin, sunrise_end,
-             sunset_begin, sunset_end) = self._sun_data[1]
+            (sunrise_begin, sunrise_end, sunset_begin, sunset_end) = self._sun_data[1]
         else:
-            sunrise = self._astral_event('sunrise', now_date)
-            sunset = self._astral_event('sunset', now_date)
+            sunrise = self._astral_event("sunrise", now_date)
+            sunset = self._astral_event("sunset", now_date)
             sunrise_begin = sunrise - _20_MIN
             sunrise_end = sunrise + _40_MIN
             sunset_begin = sunset - _40_MIN
             sunset_end = sunset + _20_MIN
             self._sun_data = (
                 now_date,
-                (sunrise_begin, sunrise_end, sunset_begin, sunset_end))
+                (sunrise_begin, sunrise_end, sunset_begin, sunset_end),
+            )
 
         if sunrise_end < now < sunset_begin:
             # Daytime
@@ -300,6 +345,6 @@ class IlluminanceSensor(Entity):
             return 0
         if now <= sunrise_end:
             # Sunrise
-            return (now-sunrise_begin).total_seconds() / (60*60)
+            return (now - sunrise_begin).total_seconds() / (60 * 60)
         # Sunset
-        return (sunset_end-now).total_seconds() / (60*60)
+        return (sunset_end - now).total_seconds() / (60 * 60)
