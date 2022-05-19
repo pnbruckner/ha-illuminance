@@ -42,13 +42,13 @@ except:
     OWM_ATTRIBUTION = "no_owm"
 from homeassistant.const import (
     ATTR_ATTRIBUTION, CONF_ENTITY_ID, CONF_API_KEY, CONF_MODE, CONF_NAME,
-    CONF_SCAN_INTERVAL, EVENT_HOMEASSISTANT_START)
+    CONF_SCAN_INTERVAL, EVENT_CORE_CONFIG_UPDATE, EVENT_HOMEASSISTANT_START)
 from homeassistant.core import callback
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_state_change
-from homeassistant.helpers.sun import get_astral_event_date, get_astral_location
+from homeassistant.helpers.sun import get_astral_location
 import homeassistant.util.dt as dt_util
 
 DEFAULT_NAME = 'Illuminance'
@@ -160,7 +160,19 @@ async def async_setup_platform(hass, config, async_add_entities,
                 hass, session, config[CONF_API_KEY], [], config[CONF_QUERY]):
             return False
 
-    async_add_entities([IlluminanceSensor(using_wu, config, session)], True)
+    def get_loc_elev(event=None):
+        try:
+            loc, elev = get_astral_location(hass)
+        except TypeError:
+            loc = get_astral_location(hass)
+            elev = None
+        hass.data["illuminance"] = loc, elev
+
+    if "illuminance" not in hass.data:
+        get_loc_elev()
+        hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, get_loc_elev)
+
+    async_add_entities([IlluminanceSensor(using_wu, config, session)], False)
 
 
 def _illumiance(elev):
@@ -234,7 +246,7 @@ class IlluminanceSensor(Entity):
         # when period is done to make sure ramping is completed.
         if not self._init_complete or self._mode == "normal" or self._using_wu:
             return True
-        changing = 0 < self._sun_factor(dt_util.now()) < 1
+        changing = 0 < self._sun_factor(dt_util.now().replace(microsecond=0)) < 1
         if changing:
             self._was_changing = True
             return True
@@ -357,14 +369,14 @@ class IlluminanceSensor(Entity):
         if self._mode == "simple":
             illuminance = 10000 * sun_factor
         else:
-            try:
-                location, elevation = get_astral_location(self.hass)
-                solar_elevation = location.solar_elevation(now, elevation)
-            except TypeError:
-                location = get_astral_location(self.hass)
-                solar_elevation = location.solar_elevation(now)
-            illuminance = _illumiance(solar_elevation)
+            illuminance = _illumiance(self._astral_event("solar_elevation", now))
         self._state = round(illuminance / sk)
+
+    def _astral_event(self, event, date_or_dt):
+        loc, elev = self.hass.data["illuminance"]
+        if elev is None:
+            return getattr(loc, event)(date_or_dt)
+        return getattr(loc, event)(date_or_dt, observer_elevation=elev)
 
     def _sun_factor(self, now):
         now_date = now.date()
@@ -373,8 +385,8 @@ class IlluminanceSensor(Entity):
             (sunrise_begin, sunrise_end,
              sunset_begin, sunset_end) = self._sun_data[1]
         else:
-            sunrise = get_astral_event_date(self.hass, 'sunrise', now_date)
-            sunset = get_astral_event_date(self.hass, 'sunset', now_date)
+            sunrise = self._astral_event('sunrise', now_date)
+            sunset = self._astral_event('sunset', now_date)
             sunrise_begin = sunrise - _20_MIN
             sunrise_end = sunrise + _40_MIN
             sunset_begin = sunset - _40_MIN
