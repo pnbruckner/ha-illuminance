@@ -5,7 +5,11 @@ Estimates outdoor illuminance based on either sun elevation or time of day. In e
 Two modes are available: normal & simple. The desired mode is selected via the [configuration](#configuration-variables).
 
 ### Normal mode - Sun elevation
-This mode uses an algorithm from the US Naval Observatory[^1] for estimating sun illuminance based on the sun's elevation (aka altitude.) The maximum value is about 150,000 lx.
+This mode uses an algorithm from the US Naval Observatory[^1] for estimating sun illuminance based on the sun's elevation (aka altitude.) The maximum value is about 150,000 lx. Below is an example of what that might look like over a three day period.
+
+<p align="center">
+  <img src=images/normal.png>
+</p>
 
 [^1]: Janiczek, P. M., and DeYoung, J. A. _Computer Programs for Sun and Moon Illuminance With Contingent Tables and Diagrams_. Circular No. 171. Washington, D. C.: United States Naval Observatory, 1987 [Google Scholar](https://scholar.google.com/scholar_lookup?title=Computer%20programs%20for%20sun%20and%20moon%20illuminance%20with%20contingent%20tables%20and%20diagrams&author=P.%20M.%20Janiczek&author=J.%20A.%20Deyoung&publication_year=1987&book=Computer%20programs%20for%20sun%20and%20moon%20illuminance%20with%20contingent%20tables%20and%20diagrams)
 
@@ -13,7 +17,7 @@ This mode uses an algorithm from the US Naval Observatory[^1] for estimating sun
 At night the value is 10 lx. From a little before sunrise to a little after the value is ramped up to whatever the current conditions indicate. The same happens around sunset, except the value is ramped down. The maximum value is 10,000 lx. Below is an example of what that might look like over a three day period.
 
 <p align="center">
-  <img src=images/illuminance_history.png>
+  <img src=images/simple.png>
 </p>
 
 ## Supported weather sources
