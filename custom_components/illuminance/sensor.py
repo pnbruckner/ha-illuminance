@@ -208,6 +208,11 @@ class IlluminanceSensor(Entity):
                 if self.hass.is_running:
                     _LOGGER.error("%s: State not found: %s", self.name, self._entity_id)
                 return False
+
+            if "buienradar" in self._entity_id:
+                self._sk_mapping = BR_MAPPING
+                return True
+
             attribution = state.attributes.get(ATTR_ATTRIBUTION)
             if not attribution:
                 _LOGGER.error(
