@@ -62,7 +62,7 @@ You can use [HACS](https://hacs.xyz/) to manage installation and updates by addi
 - **scan_interval** (*Optional*): Update interval. Minimum is 5 minutes. Default is 5 minutes.
 ## Examples
 ### Dark Sky Sensor
-```
+```yaml
 sensor:
   - platform: darksky
     api_key: !secret ds_api_key
@@ -73,7 +73,7 @@ sensor:
     entity_id: sensor.dark_sky_icon
 ```
 ### Dark Sky Weather
-```
+```yaml
 weather:
   - platform: darksky
     api_key: !secret ds_api_key
@@ -83,21 +83,21 @@ sensor:
     entity_id: weather.dark_sky
 ```
 ### Met.no, AccuWeather or ecobee
-```
+```yaml
 sensor:
   - platform: illuminance
     name: Estimated Illuminance
     entity_id: weather.home
 ```
 ### OpenWeatherMap
-```
+```yaml
 sensor:
   - platform: illuminance
     name: Estimated Illuminance
     entity_id: weather.openweathermap
 ```
 ### Buienradar
-```
+```yaml
 sensor:
   - platform: illuminance
     name: Estimated Illuminance
