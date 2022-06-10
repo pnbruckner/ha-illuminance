@@ -116,6 +116,21 @@ OWM_MAPPING = (
     (2, ("partlycloudy",)),
     (1, ("sunny", "clear-night")),
 )
+BR_MAPPING = (
+    (10, ("lightning", "lightning-rainy", "pouring")),
+    (
+        5,
+        (
+            "cloudy",
+            "fog",
+            "rainy",
+            "snowy",
+            "snowy-rainy",
+        ),
+    ),
+    (2, ("partlycloudy",)),
+    (1, ("sunny",)),
+)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -215,6 +230,8 @@ class IlluminanceSensor(Entity):
                 self._sk_mapping = ECOBEE_MAPPING
             elif attribution == OWM_ATTRIBUTION:
                 self._sk_mapping = OWM_MAPPING
+            elif "buienradar" in attribution.lower():
+                self._sk_mapping = BR_MAPPING
             else:
                 _LOGGER.error(
                     "%s: Unsupported sensor: %s, attribution: %s",
