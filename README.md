@@ -29,6 +29,7 @@ The following sources of weather data are supported:
 * [AccuWeather](https://www.home-assistant.io/integrations/accuweather/)
 * [ecobee](https://www.home-assistant.io/integrations/ecobee/)
 * [OpenWeatherMap](https://www.home-assistant.io/integrations/openweathermap/)
+* [Buienradar](https://www.home-assistant.io/integrations/buienradar/)
 
 ## Setup
 Follow the installation instructions below.
@@ -94,6 +95,13 @@ sensor:
   - platform: illuminance
     name: Estimated Illuminance
     entity_id: weather.openweathermap
+```
+### Buienradar
+```
+sensor:
+  - platform: illuminance
+    name: Estimated Illuminance
+    entity_id: weather.buienradar
 ```
 ## Releases Before 2.1.0
 See https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md.
