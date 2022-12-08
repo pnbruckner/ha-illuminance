@@ -192,9 +192,9 @@ class EntityStatus(IntEnum):
 
     NOT_SEEN = 0
     NO_ATTRIBUTION = 1
-    BAD_ATTRIBUTION = 2
-    OK_CONDITION = 3
-    OK_CLOUD = 4
+    BAD = 2
+    OK_CLOUD = 3
+    OK_CONDITION = 4
 
 
 class IlluminanceSensor(Entity):
@@ -204,6 +204,8 @@ class IlluminanceSensor(Entity):
     _entity_status = EntityStatus.NOT_SEEN
     _sk_mapping = None
     _cd_mapping = None
+    _sk = None
+    _cond_desc = None
     _warned = False
 
     def __init__(self, config):
@@ -215,25 +217,33 @@ class IlluminanceSensor(Entity):
             self._sun_data = None
         self._fallback = config[CONF_FALLBACK]
 
-    async def async_added_to_hass(self):
-        """Run when entity about to be added to hass."""
+    @callback
+    def add_to_platform_start(self, hass, platform, parallel_updates):
+        """Start adding an entity to a platform."""
+        # This method is called before first call to async_update.
+
+        super().add_to_platform_start(hass, platform, parallel_updates)
+
+        # Now that parent method has been called, self.hass has been initialized.
+
+        self._get_divisor_from_weather_data(hass.states.get(self._entity_id))
 
         @callback
         def sensor_state_listener(event):
             new_state = event.data["new_state"]
             old_state = event.data["old_state"]
-            if new_state and (
+            if (
                 self._entity_status <= EntityStatus.NO_ATTRIBUTION
                 or not old_state
+                or not new_state
                 or new_state.state != old_state.state
             ):
+                self._get_divisor_from_weather_data(new_state)
                 self.async_schedule_update_ha_state(True)
 
         # When source entity changes check to see if we should update.
         self.async_on_remove(
-            async_track_state_change_event(
-                self.hass, self._entity_id, sensor_state_listener
-            )
+            async_track_state_change_event(hass, self._entity_id, sensor_state_listener)
         )
 
     @property
@@ -253,88 +263,129 @@ class IlluminanceSensor(Entity):
 
     async def async_update(self):
         """Update state."""
+        if (
+            self._entity_status <= EntityStatus.NO_ATTRIBUTION
+            and not self.hass.is_running
+        ):
+            return
+
         try:
-            raw_condition = self._get_weather_data()
             illuminance = self._calculate_illuminance(
                 dt_util.now().replace(microsecond=0)
             )
         except AbortUpdate:
             return
-        sk, cond_desc = self._determine_divider(raw_condition)
 
         # Calculate final illuminance.
 
-        self._state = round(illuminance / sk)
+        self._state = round(illuminance / self._sk)
         _LOGGER.debug(
             "%s: Updating %s -> %i / %0.1f = %i",
             self.name,
-            cond_desc,
+            self._cond_desc,
             round(illuminance),
-            sk,
+            self._sk,
             self._state,
         )
 
-    def _get_weather_data(self):
+    def _get_divisor_from_weather_data(self, entity_state):
         """Get weather data from input entity."""
-        raw_condition = None
 
-        if self._entity_status != EntityStatus.BAD_ATTRIBUTION:
-            entity_state = self.hass.states.get(self._entity_id)
-            if entity_state:
-                raw_condition = entity_state.state
-                if raw_condition in (STATE_UNAVAILABLE, STATE_UNKNOWN):
-                    raw_condition = None
+        # Use fallback unless divisor can be successfully determined from weather data.
+        self._cond_desc = "without weather data"
+        self._sk = self._fallback
 
-                if self._entity_status <= EntityStatus.NO_ATTRIBUTION and raw_condition:
-                    try:
-                        float(raw_condition)
-                        self._entity_status = EntityStatus.OK_CLOUD
-                        _LOGGER.info(
-                            "%s: Supported sensor %s, cloud coverage",
+        if self._entity_status == EntityStatus.BAD:
+            return
+
+        raw_condition = entity_state and entity_state.state
+        if raw_condition in (STATE_UNAVAILABLE, STATE_UNKNOWN):
+            raw_condition = None
+
+        # If entity type, and potentially assocated mappings, have not been determined
+        # yet, try to determine them.
+        if self._entity_status <= EntityStatus.NO_ATTRIBUTION:
+            if raw_condition:
+                try:
+                    float(raw_condition)
+                    self._entity_status = EntityStatus.OK_CLOUD
+                    _LOGGER.info(
+                        "%s: Supported sensor %s: cloud coverage",
+                        self.name,
+                        self._entity_id,
+                    )
+                except ValueError:
+                    attribution = entity_state.attributes.get(ATTR_ATTRIBUTION)
+                    self._get_mappings(attribution, entity_state.domain)
+                    if self._entity_status == EntityStatus.BAD:
+                        _LOGGER.error(
+                            "%s: Unsupported sensor %s: %s is %s",
                             self.name,
                             self._entity_id,
+                            ATTR_ATTRIBUTION,
+                            attribution,
                         )
-                    except ValueError:
-                        attribution = entity_state.attributes.get(ATTR_ATTRIBUTION)
-                        self._get_mappings(attribution, entity_state.domain)
-                        if self._entity_status == EntityStatus.BAD_ATTRIBUTION:
-                            _LOGGER.error(
-                                "%s: Unsupported sensor: %s, %s: %s",
-                                self.name,
-                                self._entity_id,
-                                ATTR_ATTRIBUTION,
-                                attribution,
-                            )
-                        elif self._entity_status == EntityStatus.OK_CONDITION:
-                            _LOGGER.info(
-                                "%s: Supported sensor %s, %s: %s",
-                                self.name,
-                                self._entity_id,
-                                ATTR_ATTRIBUTION,
-                                attribution,
-                            )
+                        return
+                    if self._entity_status == EntityStatus.OK_CONDITION:
+                        _LOGGER.info(
+                            "%s: Supported sensor %s: %s is %s",
+                            self.name,
+                            self._entity_id,
+                            ATTR_ATTRIBUTION,
+                            attribution,
+                        )
 
             if self._entity_status <= EntityStatus.NO_ATTRIBUTION:
-                if not self.hass.is_running:
-                    # Give weather entity a chance to update so there's no unexpected
-                    # "spike" initially.
-                    raise AbortUpdate
-                if self._entity_status == EntityStatus.NO_ATTRIBUTION:
+                if self.hass.is_running:
                     _LOGGER.error(
-                        "%s: Unsupported sensor: %s, not a number and no %s attribute",
+                        "%s: Unsupported sensor %s: "
+                        "not a number, no %s attribute, or doesn't exist",
                         self.name,
                         self._entity_id,
                         ATTR_ATTRIBUTION,
                     )
-                    self._entity_status = EntityStatus.BAD_ATTRIBUTION
+                    self._entity_status = EntityStatus.BAD
+                return
 
         if raw_condition:
             self._warned = False
-        elif not self._warned:
-            _LOGGER.warning("%s: Weather data not available", self.name)
-            self._warned = True
+        else:
+            if not self._warned:
+                _LOGGER.warning("%s: Weather data not available", self.name)
+                self._warned = True
+            return
 
-        return raw_condition
+        if self._entity_status == EntityStatus.OK_CLOUD:
+            try:
+                cloud = float(raw_condition)
+                if not 0 <= cloud <= 100:
+                    raise ValueError
+            except ValueError:
+                _LOGGER.error(
+                    "%s: Cloud coverage sensor state "
+                    "is not a number between 0 and 100: %s",
+                    self.name,
+                    raw_condition,
+                )
+            else:
+                self._cond_desc = f"({round(cloud)}%)"
+                self._sk = 10 ** (cloud / 100)
+            return
+
+        assert self._entity_status == EntityStatus.OK_CONDITION
+
+        if self._cd_mapping:
+            condition = self._cd_mapping.get(raw_condition)
+            cond_desc = f"({raw_condition} -> {condition})"
+        else:
+            condition = raw_condition
+            cond_desc = f"({condition})"
+        for sk, conditions in self._sk_mapping:
+            if condition in conditions:
+                self._cond_desc = cond_desc
+                self._sk = sk
+                return
+        _LOGGER.error("%s: Unexpected current condition: %s", self.name, raw_condition)
 
     def _get_mappings(self, attribution, domain):
         """Get sk -> conditions mappings."""
@@ -350,7 +401,7 @@ class IlluminanceSensor(Entity):
                 self._entity_status = EntityStatus.OK_CONDITION
                 return
 
-        self._entity_status = EntityStatus.BAD_ATTRIBUTION
+        self._entity_status = EntityStatus.BAD
 
     def _calculate_illuminance(self, now):
         """Calculate sunny illuminance."""
@@ -405,34 +456,3 @@ class IlluminanceSensor(Entity):
             return (now - sunrise_begin).total_seconds() / (60 * 60)
         # Sunset
         return (sunset_end - now).total_seconds() / (60 * 60)
-
-    def _determine_divider(self, raw_condition):
-        """Determine illuminance divider."""
-        sk = None
-        if raw_condition:
-            if self._entity_status == EntityStatus.OK_CONDITION:
-                if self._cd_mapping:
-                    condition = self._cd_mapping.get(raw_condition)
-                    cond_desc = f"({raw_condition} -> {condition})"
-                else:
-                    condition = raw_condition
-                    cond_desc = f"({condition})"
-                for _sk, conditions in self._sk_mapping:
-                    if condition in conditions:
-                        sk = _sk
-                        break
-                if not sk:
-                    _LOGGER.error(
-                        "%s: Unexpected current observation (%s)",
-                        self.name,
-                        cond_desc,
-                        raw_condition,
-                    )
-            elif self._entity_status == EntityStatus.OK_CLOUD:
-                cloud = float(raw_condition)
-                cond_desc = f"({round(cloud)}%)"
-                sk = 10 ** (cloud / 100)
-        if not sk:
-            cond_desc = "without weather data"
-            sk = self._fallback
-        return sk, cond_desc
