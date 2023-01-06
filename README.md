@@ -29,6 +29,7 @@ The following sources of weather data are supported:
 * [AccuWeather](https://www.home-assistant.io/integrations/accuweather/)
 * [ecobee](https://www.home-assistant.io/integrations/ecobee/)
 * [OpenWeatherMap](https://www.home-assistant.io/integrations/openweathermap/)
+* [Buienradar](https://www.home-assistant.io/integrations/buienradar/)
 
 ## Setup
 Follow the installation instructions below.
@@ -59,41 +60,45 @@ You can use [HACS](https://hacs.xyz/) to manage installation and updates by addi
 - **mode** (*Optional*): Mode of operation. Choices are `normal` (default) which uses sun elevation, and `simple` which uses time of day.
 - **name** (*Optional*): Name of the sensor. Default is `Illuminance`.
 - **scan_interval** (*Optional*): Update interval. Minimum is 5 minutes. Default is 5 minutes.
+- **fallback** (*Optional*): Illuminance divisor to use when weather data is not available. Must be in the range of 1 (sunny) through 10 (dark.) Default is 10.
 ## Examples
-### Dark Sky Sensor
+### Using Fallback Divisor
+```yaml
+sensor:
+  - platform: illuminance
+    entity_id: weather.home
+    fallback: 5
 ```
+### Dark Sky Sensor
+```yaml
 sensor:
   - platform: darksky
     api_key: !secret ds_api_key
     monitored_conditions:
       - icon
   - platform: illuminance
-    name: DSS Illuminance
-    entity_id: sensor.dark_sky_icon
+    entity_id: sensor.NAME
 ```
 ### Dark Sky Weather
-```
+```yaml
 weather:
   - platform: darksky
     api_key: !secret ds_api_key
 sensor:
   - platform: illuminance
-    name: DSW Illuminance
-    entity_id: weather.dark_sky
+    entity_id: weather.NAME
 ```
-### Met.no, AccuWeather or ecobee
-```
+### Other Sensor Entities
+```yaml
 sensor:
   - platform: illuminance
-    name: Estimated Illuminance
-    entity_id: weather.home
+    entity_id: sensor.NAME
 ```
-### OpenWeatherMap
-```
+### Other Weather Entities
+```yaml
 sensor:
   - platform: illuminance
-    name: Estimated Illuminance
-    entity_id: weather.openweathermap
+    entity_id: weather.NAME
 ```
 ## Releases Before 2.1.0
 See https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md.
