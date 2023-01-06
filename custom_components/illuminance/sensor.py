@@ -228,13 +228,15 @@ class IlluminanceSensor(SensorEntity):
 
     def __init__(self, config: ConfigType) -> None:
         """Initialize sensor."""
+        name = config[CONF_NAME]
         self.entity_description = SensorEntityDescription(
             DOMAIN,
             device_class=SensorDeviceClass.ILLUMINANCE,
-            name=config[CONF_NAME],
+            name=name,
             native_unit_of_measurement=LIGHT_LUX,
             state_class=SensorStateClass.MEASUREMENT,
         )
+        self._attr_unique_id = name
         self._entity_id: str = config[CONF_ENTITY_ID]
         self._mode: str = config[CONF_MODE]
         self._fallback: float = config[CONF_FALLBACK]
