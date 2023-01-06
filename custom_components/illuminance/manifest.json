@@ -1,8 +1,8 @@
 {
   "domain": "illuminance",
   "name": "Illuminance",
-  "version": "3.1.0b0",
-  "documentation": "https://github.com/pnbruckner/ha-illuminance/blob/fallback-to-sunny/README.md",
+  "version": "3.1.0",
+  "documentation": "https://github.com/pnbruckner/ha-illuminance/blob/master/README.md",
   "issue_tracker": "https://github.com/pnbruckner/ha-illuminance/issues",
   "requirements": [],
   "dependencies": [],
