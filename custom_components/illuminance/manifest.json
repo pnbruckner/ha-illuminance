@@ -5,7 +5,8 @@
   "documentation": "https://github.com/pnbruckner/ha-illuminance/blob/master/README.md",
   "issue_tracker": "https://github.com/pnbruckner/ha-illuminance/issues",
   "requirements": [],
-  "dependencies": ["darksky"],
+  "dependencies": [],
+  "after_dependencies": ["darksky"],
   "iot_class": "calculated",
   "codeowners": ["@pnbruckner"]
 }
