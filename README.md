@@ -21,15 +21,18 @@ At night the value is 10 lx. From a little before sunrise to a little after the 
 </p>
 
 ## Supported weather sources
-The following sources of weather data are supported:
+Any weather entity that uses the [standard list of conditions](https://www.home-assistant.io/integrations/weather/#condition-mapping), or that provides a cloud coverage percentage, should work with this integration.
+The following sources of weather data are known to be supported:
 
-* [Dark Sky Sensor (icon)](https://www.home-assistant.io/components/sensor.darksky/)
-* [Dark Sky Weather](https://www.home-assistant.io/components/weather.darksky/)
-* [Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/)
-* [AccuWeather](https://www.home-assistant.io/integrations/accuweather/)
-* [ecobee](https://www.home-assistant.io/integrations/ecobee/)
-* [OpenWeatherMap](https://www.home-assistant.io/integrations/openweathermap/)
-* [Buienradar](https://www.home-assistant.io/integrations/buienradar/)
+Integration | Notes
+-|-
+[AccuWeather](https://www.home-assistant.io/integrations/accuweather/) | `weather`
+[Buienradar Sensor](https://www.home-assistant.io/integrations/buienradar/#sensor) | Condition `sensor`
+[Dark Sky Sensor](https://www.home-assistant.io/components/sensor.darksky/) | icon & cloud_cover `sensor`
+[Dark Sky Weather](https://www.home-assistant.io/components/weather.darksky/) | `weather`
+[ecobee](https://www.home-assistant.io/integrations/ecobee/) |
+[Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/) | `weather`
+[OpenWeatherMap](https://www.home-assistant.io/integrations/openweathermap/) | `weather`; cloud_coverage & condition `sensor`
 
 ## Setup
 Follow the installation instructions below.
@@ -70,49 +73,11 @@ where `<config>` is your Home Assistant configuration directory.
 This custom integration supports HomeAssistant versions 2021.12 or newer, using Python 3.9 or newer.
 
 ## Configuration variables
-- **entity_id**: Entity ID of entity that indicates current weather conditions. See examples below.
+- **entity_id**: Entity ID of entity that indicates current weather conditions.
 - **mode** (*Optional*): Mode of operation. Choices are `normal` (default) which uses sun elevation, and `simple` which uses time of day.
 - **name** (*Optional*): Name of the sensor. Default is `Illuminance`.
 - **scan_interval** (*Optional*): Update interval. Minimum is 5 minutes. Default is 5 minutes.
-- **fallback** (*Optional*): Illuminance divisor to use when weather data is not available. Must be in the range of 1 (sunny) through 10 (dark.) Default is 10.
-## Examples
-### Using Fallback Divisor
-```yaml
-sensor:
-  - platform: illuminance
-    entity_id: weather.home
-    fallback: 5
-```
-### Dark Sky Sensor
-```yaml
-sensor:
-  - platform: darksky
-    api_key: !secret ds_api_key
-    monitored_conditions:
-      - icon
-  - platform: illuminance
-    entity_id: sensor.NAME
-```
-### Dark Sky Weather
-```yaml
-weather:
-  - platform: darksky
-    api_key: !secret ds_api_key
-sensor:
-  - platform: illuminance
-    entity_id: weather.NAME
-```
-### Other Sensor Entities
-```yaml
-sensor:
-  - platform: illuminance
-    entity_id: sensor.NAME
-```
-### Other Weather Entities
-```yaml
-sensor:
-  - platform: illuminance
-    entity_id: weather.NAME
-```
+- **fallback** (*Optional*): Illuminance divisor to use when weather data is not available. Must be in the range of 1 (clear) through 10 (dark.) Default is 10.
+
 ## Releases Before 2.1.0
 See https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md.

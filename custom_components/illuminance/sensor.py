@@ -28,6 +28,23 @@ from homeassistant.components.sensor import (
     SensorEntityDescription,
     SensorStateClass,
 )
+from homeassistant.components.weather import (
+    ATTR_CONDITION_CLEAR_NIGHT,
+    ATTR_CONDITION_CLOUDY,
+    ATTR_CONDITION_EXCEPTIONAL,
+    ATTR_CONDITION_FOG,
+    ATTR_CONDITION_HAIL,
+    ATTR_CONDITION_LIGHTNING,
+    ATTR_CONDITION_LIGHTNING_RAINY,
+    ATTR_CONDITION_PARTLYCLOUDY,
+    ATTR_CONDITION_POURING,
+    ATTR_CONDITION_RAINY,
+    ATTR_CONDITION_SNOWY,
+    ATTR_CONDITION_SNOWY_RAINY,
+    ATTR_CONDITION_SUNNY,
+    ATTR_CONDITION_WINDY,
+    ATTR_CONDITION_WINDY_VARIANT,
+)
 from homeassistant.const import (
     ATTR_ATTRIBUTION,
     CONF_ENTITY_ID,
@@ -55,94 +72,48 @@ DEFAULT_FALLBACK = 10
 
 CONF_FALLBACK = "fallback"
 
-DARKSKY_PATTERN = r"(?i).*dark\s*sky.*"
-DARKSKY_MAPPING = (
-    (10, ("hail", "lightning")),
-    (5, ("fog", "rainy", "snowy", "snowy-rainy")),
-    (3, ("cloudy",)),
-    (2, ("partlycloudy",)),
-    (1, ("clear-night", "sunny", "windy")),
-)
-MET_PATTERN = r".*met\.no.*"
-MET_MAPPING = (
-    (10, ("lightning-rainy", "pouring")),
-    (5, ("fog", "rainy", "snowy", "snowy-rainy")),
-    (3, ("cloudy",)),
-    (2, ("partlycloudy",)),
-    (1, ("clear-night", "sunny")),
-)
-AW_PATTERN = r"(?i).*accuweather.*"
-AW_MAPPING = (
-    (10, ("lightning", "lightning-rainy", "pouring")),
+# Standard sk to conditions mapping
+
+MAPPING = (
+    (
+        10,
+        (
+            ATTR_CONDITION_LIGHTNING,
+            ATTR_CONDITION_LIGHTNING_RAINY,
+            ATTR_CONDITION_POURING,
+        ),
+    ),
     (
         5,
         (
-            "cloudy",
-            "fog",
-            "rainy",
-            "snowy",
-            "snowy-rainy",
-            "hail",
-            "exceptional",
-            "windy",
+            ATTR_CONDITION_CLOUDY,
+            ATTR_CONDITION_FOG,
+            ATTR_CONDITION_RAINY,
+            ATTR_CONDITION_SNOWY,
+            ATTR_CONDITION_SNOWY_RAINY,
+            ATTR_CONDITION_HAIL,
+            ATTR_CONDITION_EXCEPTIONAL,
         ),
     ),
-    (3, ("mostlycloudy",)),
-    (2, ("partlycloudy",)),
-    (1, ("sunny", "clear-night")),
-)
-ECOBEE_PATTERN = r"(?i).*ecobee.*"
-ECOBEE_MAPPING = (
-    (10, ("pouring", "snowy-heavy", "lightning-rainy")),
-    (5, ("cloudy", "fog", "rainy", "snowy", "snowy-rainy", "hail", "windy", "tornado")),
-    (2, ("partlycloudy", "hazy")),
-    (1, ("sunny",)),
-)
-OWM_PATTERN = r"(?i).*openweathermap.*"
-OWM_MAPPING = (
-    (10, ("lightning", "lightning-rainy", "pouring")),
-    (
-        5,
-        (
-            "cloudy",
-            "fog",
-            "rainy",
-            "snowy",
-            "snowy-rainy",
-            "hail",
-            "exceptional",
-            "windy",
-            "windy-variant",
-        ),
-    ),
-    (2, ("partlycloudy",)),
-    (1, ("sunny", "clear-night")),
-)
-BR_PATTERN = r"(?i).*buienradar.*"
-BR_MAPPING = (
-    (10, ("lightning", "lightning-rainy", "pouring")),
-    (
-        5,
-        (
-            "cloudy",
-            "fog",
-            "rainy",
-            "snowy",
-            "snowy-rainy",
-        ),
-    ),
-    (2, ("partlycloudy",)),
-    (1, ("sunny",)),
+    (2, (ATTR_CONDITION_PARTLYCLOUDY, ATTR_CONDITION_WINDY_VARIANT)),
+    (1, (ATTR_CONDITION_SUNNY, ATTR_CONDITION_CLEAR_NIGHT, ATTR_CONDITION_WINDY)),
 )
 
-ATTRIBUTION_TO_MAPPING = (
-    (DARKSKY_PATTERN, DARKSKY_MAPPING),
-    (MET_PATTERN, MET_MAPPING),
-    (AW_PATTERN, AW_MAPPING),
-    (ECOBEE_PATTERN, ECOBEE_MAPPING),
-    (OWM_PATTERN, OWM_MAPPING),
-    (BR_PATTERN, BR_MAPPING),
+# Weather sources that require special treatment
+
+AW_PATTERN = re.compile(r"(?i).*accuweather.*")
+AW_MAPPING = ((3, ("mostlycloudy",)),)
+
+DARKSKY_PATTERN = re.compile(r"(?i).*dark\s*sky.*")
+
+ECOBEE_PATTERN = re.compile(r"(?i).*ecobee.*")
+ECOBEE_MAPPING = (
+    (10, ("snowy-heavy",)),
+    (5, ("tornado",)),
+    (2, ("hazy",)),
 )
+
+ADDITIONAL_MAPPINGS = ((AW_PATTERN, AW_MAPPING), (ECOBEE_PATTERN, ECOBEE_MAPPING))
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -368,15 +339,6 @@ class IlluminanceSensor(SensorEntity):
                         Union[str, None], entity_state.attributes.get(ATTR_ATTRIBUTION)
                     )
                     self._get_mappings(attribution, entity_state.domain)
-                    if self._entity_status == EntityStatus.BAD:
-                        _LOGGER.error(
-                            "%s: Unsupported sensor %s: %s is %s",
-                            self.name,
-                            self.weather_entity,
-                            ATTR_ATTRIBUTION,
-                            attribution,
-                        )
-                        return
                     if self._entity_status == EntityStatus.OK_CONDITION:
                         _LOGGER.info(
                             "%s: Supported sensor %s: %s is %s",
@@ -445,15 +407,13 @@ class IlluminanceSensor(SensorEntity):
             self._entity_status = EntityStatus.NO_ATTRIBUTION
             return
 
-        for pat, mapping in ATTRIBUTION_TO_MAPPING:
-            if re.fullmatch(pat, attribution):
-                self._sk_mapping = mapping
-                if pat == DARKSKY_PATTERN and domain == SENSOR_DOMAIN:
-                    self._cd_mapping = DSW_MAP_CONDITION
-                self._entity_status = EntityStatus.OK_CONDITION
-                return
-
-        self._entity_status = EntityStatus.BAD
+        self._sk_mapping = MAPPING
+        for pat, mapping in ADDITIONAL_MAPPINGS:
+            if pat.fullmatch(attribution):
+                self._sk_mapping += mapping
+        if DARKSKY_PATTERN.fullmatch(attribution) and domain == SENSOR_DOMAIN:
+            self._cd_mapping = DSW_MAP_CONDITION
+        self._entity_status = EntityStatus.OK_CONDITION
 
     def _calculate_illuminance(self, now: datetime) -> Num:
         """Calculate sunny illuminance."""
