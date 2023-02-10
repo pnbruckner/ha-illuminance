@@ -1,5 +1,7 @@
 # Illuminance Sensor
-Estimates outdoor illuminance based on either sun elevation or time of day. In either case, the value is adjusted based on current weather conditions.
+Creates a `sensor` entity that estimates outdoor illuminance based on either sun elevation or time of day.
+In either case, the value is adjusted based on current weather conditions obtained from another, existing entity.
+
 
 ## Modes of operation
 Two modes are available: normal & simple. The desired mode is selected via the [configuration](#configuration-variables).
@@ -40,6 +42,9 @@ Then add the desired configuration. Here is an example of a typical configuratio
 ```yaml
 sensor:
   - platform: illuminance
+    # Name of new sensor entity
+    name: Home Outdoor Illuminance
+    # Existing entity that provides current weather conditions
     entity_id: weather.home
 ```
 
@@ -73,7 +78,7 @@ where `<config>` is your Home Assistant configuration directory.
 This custom integration supports HomeAssistant versions 2021.12 or newer, using Python 3.9 or newer.
 
 ## Configuration variables
-- **entity_id**: Entity ID of entity that indicates current weather conditions.
+- **entity_id**: Entity ID of another entity that indicates current weather conditions.
 - **mode** (*Optional*): Mode of operation. Choices are `normal` (default) which uses sun elevation, and `simple` which uses time of day.
 - **name** (*Optional*): Name of the sensor. Default is `Illuminance`.
 - **scan_interval** (*Optional*): Update interval. Minimum is 5 minutes. Default is 5 minutes.
