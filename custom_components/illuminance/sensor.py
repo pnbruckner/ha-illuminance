@@ -19,7 +19,13 @@ from astral import Elevation
 from astral.location import Location
 import voluptuous as vol
 
-from homeassistant.components.darksky.weather import MAP_CONDITION as DSW_MAP_CONDITION
+try:
+    from homeassistant.components.darksky.weather import (
+        MAP_CONDITION as DSW_MAP_CONDITION
+    )
+except ImportError:
+    DSW_MAP_CONDITION = None
+
 from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
     PLATFORM_SCHEMA,
@@ -412,7 +418,14 @@ class IlluminanceSensor(SensorEntity):
             if pat.fullmatch(attribution):
                 self._sk_mapping += mapping
         if DARKSKY_PATTERN.fullmatch(attribution) and domain == SENSOR_DOMAIN:
-            self._cd_mapping = DSW_MAP_CONDITION
+            if DSW_MAP_CONDITION is None:
+                _LOGGER.warning(
+                    "%s appears to be a DarkSky sensor, "
+                    "but DarkSky is no longer supported",
+                    self.weather_entity,
+                )
+            else:
+                self._cd_mapping = DSW_MAP_CONDITION
         self._entity_status = EntityStatus.OK_CONDITION
 
     def _calculate_illuminance(self, now: datetime) -> Num:
