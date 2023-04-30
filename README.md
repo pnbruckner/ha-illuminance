@@ -30,8 +30,6 @@ Integration | Notes
 -|-
 [AccuWeather](https://www.home-assistant.io/integrations/accuweather/) | `weather`
 [Buienradar Sensor](https://www.home-assistant.io/integrations/buienradar/#sensor) | Condition `sensor`
-[Dark Sky Sensor](https://www.home-assistant.io/components/sensor.darksky/) | icon & cloud_cover `sensor`
-[Dark Sky Weather](https://www.home-assistant.io/components/weather.darksky/) | `weather`
 [ecobee](https://www.home-assistant.io/integrations/ecobee/) |
 [Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/) | `weather`
 [OpenWeatherMap](https://www.home-assistant.io/integrations/openweathermap/) | `weather`; cloud_coverage & condition `sensor`
