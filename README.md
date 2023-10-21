@@ -33,6 +33,7 @@ Integration | Notes
 [ecobee](https://www.home-assistant.io/integrations/ecobee/) |
 [Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/) | `weather`
 [OpenWeatherMap](https://www.home-assistant.io/integrations/openweathermap/) | `weather`; cloud_coverage & condition `sensor`
+[WeatherBit](https://github.com/briis/weatherbit) (install using HACS) | `cloud_coverage`
 
 ## Setup
 Follow the installation instructions below.
