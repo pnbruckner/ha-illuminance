@@ -1,0 +1,49 @@
+{
+    "title": "Verlichtingssterkte",
+    "config": {
+        "step": {
+            "options": {
+                "title": "Verlichtingssterkte opties",
+                "data": {
+                    "mode": "Wijze",
+                    "entity_id": "Bron weergegevens",
+                    "scan_interval": "Updateperiode in minuten",
+                    "fallback": "Verlichtingssterktedeler bij geen weergegevens"
+                }
+            },
+            "name": {
+                "title": "Naam",
+                "data": {
+                    "name": "Naam"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "options": {
+                "title": "Verlichtingssterkte opties",
+                "data": {
+                    "mode": "Wijze",
+                    "entity_id": "Bron weergegevens",
+                    "scan_interval": "Updateperiode in minuten",
+                    "fallback": "Verlichtingssterktedeler bij geen weergegevens"
+                }
+            }
+        }
+    },
+    "selector": {
+        "mode": {
+            "options": {
+                "normal": "Normaal",
+                "simple": "Eenvoudig"
+            }
+        }
+    },
+    "services": {
+        "reload": {
+            "name": "Herlaadt",
+            "description": "Herlaadt Verlichtingssterkte vanuit de YAML-configuratie."
+        }
+    }
+}
