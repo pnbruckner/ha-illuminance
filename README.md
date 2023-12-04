@@ -1,4 +1,4 @@
-# Illuminance Sensor
+# <img src="https://brands.home-assistant.io/illuminance/icon.png" alt="Sun2 Sensor" width="50" height="50"/> Illuminance Sensor
 Creates a `sensor` entity that estimates outdoor illuminance based on either sun elevation or time of day.
 In either case, the value is adjusted based on current weather conditions obtained from another, existing entity.
 
@@ -34,18 +34,6 @@ Integration | Notes
 [Meteorologisk institutt (Met.no)](https://www.home-assistant.io/integrations/met/) | `weather`
 [OpenWeatherMap](https://www.home-assistant.io/integrations/openweathermap/) | `weather`; cloud_coverage & condition `sensor`
 
-## Setup
-Follow the installation instructions below.
-Then add the desired configuration. Here is an example of a typical configuration:
-```yaml
-sensor:
-  - platform: illuminance
-    # Name of new sensor entity
-    name: Home Outdoor Illuminance
-    # Existing entity that provides current weather conditions
-    entity_id: weather.home
-```
-
 ## Installation
 ### With HACS
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://hacs.xyz/)
@@ -61,26 +49,69 @@ https://github.com/pnbruckner/ha-illuminance
 2. Install the integration using the appropriate button on the HACS Integrations page. Search for "illuminance".
 
 ### Manual
-Place a copy of:
 
-[`__init__.py`](custom_components/illuminance/__init__.py) at `<config>/custom_components/illuminance/__init__.py`  
-[`sensor.py`](custom_components/illuminance/sensor.py) at `<config>/custom_components/illuminance/sensor.py`  
-[`manifest.json`](custom_components/illuminance/manifest.json) at `<config>/custom_components/illuminance/manifest.json`
-
+Place a copy of the files from [`custom_components/illuminance`](custom_components/illuminance)
+in `<config>/custom_components/illuminance`,
 where `<config>` is your Home Assistant configuration directory.
 
->__NOTE__: Do not download the file by using the link above directly. Rather, click on it, then on the page that comes up use the `Raw` button.
+>__NOTE__: When downloading, make sure to use the `Raw` button from each file's page.
 
 ### Versions
 
-This custom integration supports HomeAssistant versions 2021.12 or newer, using Python 3.9 or newer.
+This custom integration supports HomeAssistant versions 2023.4.0 or newer.
+
+## Services
+
+### `illuminance.reload`
+
+Reloads Illuminance from the YAML-configuration. Also adds `ILLUMINANCE` to the Developers Tools -> YAML page.
 
 ## Configuration variables
-- **entity_id**: Entity ID of another entity that indicates current weather conditions.
-- **mode** (*Optional*): Mode of operation. Choices are `normal` (default) which uses sun elevation, and `simple` which uses time of day.
-- **name** (*Optional*): Name of the sensor. Default is `Illuminance`.
-- **scan_interval** (*Optional*): Update interval. Minimum is 5 minutes. Default is 5 minutes.
-- **fallback** (*Optional*): Illuminance divisor to use when weather data is not available. Must be in the range of 1 (clear) through 10 (dark.) Default is 10.
+
+A list of configuration options for one or more sensors. Each sensor is defined by the following options.
+
+> Note: This defines configuration via YAML. However, the same sensors can be added in the UI.
+
+Key | Optional | Description
+-|-|-
+`unique_id` | no | Unique identifier for sensor. This allows any of the remaining options to be changed without looking like a new sensor.
+`entity_id` | no | Entity ID of another entity that indicates current weather conditions
+`fallback` | yes | Illuminance divisor to use when weather data is not available. Must be in the range of 1 (clear) through 10 (dark.) Default is 10.
+`mode` | yes | Mode of operation. Choices are `normal` (default) which uses sun elevation, and `simple` which uses time of day.
+`name` | yes | Name of the sensor. Default is `Illuminance`.
+`scan_interval` | yes | Update interval. Minimum is 5 minutes. Default is 5 minutes.
+
+## Converting from `platform` configuration
+
+In previous versions, configuration was done under `sensor`.
+This is now deprecated and will generate a warning at startup.
+It should be converted to the new `illuminance` format as described above.
+
+Here is an example of the old format:
+
+```yaml
+sensor:
+  - platform: illuminance
+    entity_id: weather.home_forecast
+    fallback: 5
+    mode: normal
+    name: Weather-Based Sun Illuminance
+    scan_interval:
+      minutes: 10
+```
+
+This is the equivalent configuration in the new format:
+
+```yaml
+illuminance:
+  - unique_id: 1
+    entity_id: weather.home_forecast
+    fallback: 5
+    mode: normal
+    name: Weather-Based Sun Illuminance
+    scan_interval:
+      minutes: 10
+```
 
 ## Releases Before 2.1.0
 See https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md.
