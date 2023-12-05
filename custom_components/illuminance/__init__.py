@@ -2,17 +2,18 @@
 from __future__ import annotations
 
 import asyncio
-from datetime import timedelta
+from collections.abc import Coroutine
+from typing import Any
 
 import voluptuous as vol
 
-from homeassistant.config_entries import ConfigEntry, SOURCE_IMPORT
+from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
     CONF_SCAN_INTERVAL,
     CONF_UNIQUE_ID,
     EVENT_CORE_CONFIG_UPDATE,
-    Platform,
     SERVICE_RELOAD,
+    Platform,
 )
 from homeassistant.core import Event, HomeAssistant, ServiceCall
 import homeassistant.helpers.config_validation as cv
@@ -51,17 +52,20 @@ PLATFORMS = [Platform.SENSOR]
 
 
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
-    """Setup composite integration."""
+    """Set up composite integration."""
 
     def get_loc_elev(event: Event | None = None) -> None:
         """Get HA Location object & elevation."""
         hass.data[DOMAIN] = get_astral_location(hass)
 
-    async def process_config(config: ConfigType, run_immediately: bool = True) -> None:
+    async def process_config(
+        config: ConfigType | None, run_immediately: bool = True
+    ) -> None:
         """Process illuminance config."""
-        configs = config.get(DOMAIN, [])
+        if not config or not (configs := config.get(DOMAIN)):
+            configs = []
         unique_ids = [config[CONF_UNIQUE_ID] for config in configs]
-        tasks = []
+        tasks: list[Coroutine[Any, Any, Any]] = []
 
         for entry in hass.config_entries.async_entries(DOMAIN):
             if entry.source != SOURCE_IMPORT:

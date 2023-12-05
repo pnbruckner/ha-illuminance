@@ -1,16 +1,16 @@
 """Config flow for Illuminance integration."""
 from __future__ import annotations
 
-from abc import ABC, abstractmethod
+from abc import abstractmethod
 from typing import Any
 
 import voluptuous as vol
 
 from homeassistant.config_entries import (
+    SOURCE_IMPORT,
     ConfigEntry,
     ConfigFlow,
     OptionsFlowWithConfigEntry,
-    SOURCE_IMPORT,
 )
 from homeassistant.const import (
     CONF_ENTITY_ID,
@@ -20,7 +20,7 @@ from homeassistant.const import (
     CONF_UNIQUE_ID,
 )
 from homeassistant.core import callback
-from homeassistant.data_entry_flow import FlowResult
+from homeassistant.data_entry_flow import FlowHandler, FlowResult
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
@@ -43,8 +43,13 @@ from .const import (
 from .sensor import MODES
 
 
-class IlluminanceFlow(ABC):
+class IlluminanceFlow(FlowHandler):
     """Illuminance flow mixin."""
+
+    @abstractmethod
+    @property
+    def options(self) -> dict[str, Any]:
+        """Return mutable copy of options."""
 
     async def async_step_options(
         self, user_input: dict[str, Any] | None = None
@@ -95,7 +100,7 @@ class IlluminanceConfigFlow(ConfigFlow, IlluminanceFlow, domain=DOMAIN):
 
     def __init__(self) -> None:
         """Initialize config flow."""
-        self.options = {}
+        self._options: dict[str, Any] = {}
 
     @staticmethod
     @callback
@@ -112,6 +117,11 @@ class IlluminanceConfigFlow(ConfigFlow, IlluminanceFlow, domain=DOMAIN):
         if config_entry.source == SOURCE_IMPORT:
             return False
         return True
+
+    @property
+    def options(self) -> dict[str, Any]:
+        """Return mutable copy of options."""
+        return self._options
 
     async def async_step_import(self, data: dict[str, Any]) -> FlowResult:
         """Import config entry from configuration."""

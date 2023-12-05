@@ -1,5 +1,4 @@
-"""
-Illuminance Sensor.
+"""Illuminance Sensor.
 
 A Sensor platform that estimates outdoor illuminance from current weather conditions.
 """
@@ -56,7 +55,7 @@ from homeassistant.const import (
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, Event, State, callback
+from homeassistant.core import Event, HomeAssistant, State, callback
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import DeviceEntryType
 
@@ -64,7 +63,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType
 try:
     from homeassistant.helpers.device_registry import DeviceInfo
 except ImportError:
-    from homeassistant.helpers.entity import DeviceInfo
+    from homeassistant.helpers.entity import DeviceInfo  # type: ignore[attr-defined]
 
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
@@ -80,7 +79,6 @@ from .const import (
     DOMAIN,
     MIN_SCAN_INTERVAL,
 )
-
 
 # Standard sk to conditions mapping
 
@@ -177,7 +175,7 @@ def _sensor(
     entity_description = IlluminanceSensorEntityDescription(
         DOMAIN,
         device_class=SensorDeviceClass.ILLUMINANCE,
-        name=config[CONF_NAME],
+        name=cast(str, config[CONF_NAME]),
         native_unit_of_measurement=LIGHT_LUX,
         state_class=SensorStateClass.MEASUREMENT,
         weather_entity=cast(str, config[CONF_ENTITY_ID]),
@@ -198,7 +196,7 @@ async def async_setup_platform(
 ) -> None:
     """Set up sensors."""
     _LOGGER.warning(
-        "%s: %s under %s is deprecated. Move to %s: ...",
+        "%s: %s under %s is deprecated. Move to %s:",
         CONF_PLATFORM,
         DOMAIN,
         SENSOR_DOMAIN,
@@ -270,7 +268,7 @@ class IlluminanceSensor(SensorEntity):
         if entity_description.unique_id:
             self._attr_unique_id = entity_description.unique_id
         else:
-            self._attr_unique_id = entity_description.name
+            self._attr_unique_id = cast(str, entity_description.name)
 
     @property
     def weather_entity(self) -> str:
