@@ -52,13 +52,20 @@ from homeassistant.const import (
     CONF_NAME,
     CONF_PLATFORM,
     CONF_SCAN_INTERVAL,
-    CONF_UNIQUE_ID,
     LIGHT_LUX,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
 from homeassistant.core import HomeAssistant, Event, State, callback
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.device_registry import DeviceEntryType
+
+# Device Info moved to device_registry in 2023.9
+try:
+    from homeassistant.helpers.device_registry import DeviceInfo
+except ImportError:
+    from homeassistant.helpers.entity import DeviceInfo
+
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
 from homeassistant.helpers.event import async_track_state_change_event
@@ -245,6 +252,11 @@ class IlluminanceSensor(SensorEntity):
     """Illuminance sensor."""
 
     entity_description: IlluminanceSensorEntityDescription
+    _attr_device_info = DeviceInfo(
+        entry_type=DeviceEntryType.SERVICE,
+        identifiers={(DOMAIN, DOMAIN)},
+        name=DOMAIN.title(),
+    )
     _entity_status = EntityStatus.NOT_SEEN
     _sk_mapping: Sequence[tuple[Num, Sequence[str]]] | None = None
     _sk: Num
