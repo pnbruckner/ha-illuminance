@@ -2,7 +2,8 @@
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Any
+from datetime import timedelta
+from typing import Any, cast
 
 import voluptuous as vol
 
@@ -46,8 +47,8 @@ from .sensor import MODES
 class IlluminanceFlow(FlowHandler):
     """Illuminance flow mixin."""
 
-    @abstractmethod
     @property
+    @abstractmethod
     def options(self) -> dict[str, Any]:
         """Return mutable copy of options."""
 
@@ -126,6 +127,10 @@ class IlluminanceConfigFlow(ConfigFlow, IlluminanceFlow, domain=DOMAIN):
     async def async_step_import(self, data: dict[str, Any]) -> FlowResult:
         """Import config entry from configuration."""
         title = data.pop(CONF_NAME)
+        # Convert from timedelta to float in minutes.
+        data[CONF_SCAN_INTERVAL] = (
+            cast(timedelta, data[CONF_SCAN_INTERVAL]).total_seconds() / 60
+        )
         if existing_entry := await self.async_set_unique_id(data.pop(CONF_UNIQUE_ID)):
             if not self.hass.config_entries.async_update_entry(
                 existing_entry, title=title, options=data

@@ -9,7 +9,6 @@ import voluptuous as vol
 
 from homeassistant.config_entries import SOURCE_IMPORT, ConfigEntry
 from homeassistant.const import (
-    CONF_SCAN_INTERVAL,
     CONF_UNIQUE_ID,
     EVENT_CORE_CONFIG_UPDATE,
     SERVICE_RELOAD,
@@ -22,16 +21,13 @@ from homeassistant.helpers.service import async_register_admin_service
 from homeassistant.helpers.sun import get_astral_location
 from homeassistant.helpers.typing import ConfigType
 
-from .const import DEFAULT_SCAN_INTERVAL_MIN, DOMAIN, MIN_SCAN_INTERVAL_MIN
-from .sensor import ILLUMINANCE_SCHEMA_BASE
+from .const import DOMAIN
+from .sensor import ILLUMINANCE_SCHEMA
 
 _ILLUMINANCE_SCHEMA = vol.Schema(
-    ILLUMINANCE_SCHEMA_BASE
+    ILLUMINANCE_SCHEMA
     | {
         vol.Required(CONF_UNIQUE_ID): cv.string,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL_MIN): vol.All(
-            vol.Coerce(float), vol.Range(min=MIN_SCAN_INTERVAL_MIN)
-        ),
     }
 )
 

@@ -133,21 +133,18 @@ class Mode(Enum):
 
 MODES = list(Mode.__members__)
 
-ILLUMINANCE_SCHEMA_BASE = {
+ILLUMINANCE_SCHEMA = {
     vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
+        cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)
+    ),
     vol.Required(CONF_ENTITY_ID): cv.entity_id,
     vol.Optional(CONF_MODE, default=MODES[0]): vol.In(MODES),
     vol.Optional(CONF_FALLBACK, default=DEFAULT_FALLBACK): vol.All(
         vol.Coerce(float), vol.Range(1, 10)
     ),
 }
-_ILLUMINANCE_SCHEMA = ILLUMINANCE_SCHEMA_BASE | {
-    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
-        cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)
-    ),
-}
-
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(_ILLUMINANCE_SCHEMA)
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
 
 _20_MIN = timedelta(minutes=20)
 _40_MIN = timedelta(minutes=40)
