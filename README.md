@@ -4,7 +4,7 @@ In either case, the value is adjusted based on current weather conditions obtain
 
 
 ## Modes of operation
-Two modes are available: normal & simple. The desired mode is selected via the [configuration](#configuration-variables).
+Two modes are available: normal & simple.
 
 ### Normal mode - Sun elevation
 This mode uses an algorithm from the US Naval Observatory[^1] for estimating sun illuminance based on the sun's elevation (aka altitude.) The maximum value is about 150,000 lx. Below is an example of what that might look like over a three day period.
@@ -74,7 +74,7 @@ A list of configuration options for one or more sensors. Each sensor is defined 
 
 Key | Optional | Description
 -|-|-
-`unique_id` | no | Unique identifier for sensor. This allows any of the remaining options to be changed without looking like a new sensor.
+`unique_id` | no | Unique identifier for sensor. This allows any of the remaining options to be changed without looking like a new sensor. (Only required for YAML-based configuration.)
 `entity_id` | no | Entity ID of another entity that indicates current weather conditions
 `fallback` | yes | Illuminance divisor to use when weather data is not available. Must be in the range of 1 (clear) through 10 (dark.) Default is 10.
 `mode` | yes | Mode of operation. Choices are `normal` (default) which uses sun elevation, and `simple` which uses time of day.
@@ -86,6 +86,7 @@ Key | Optional | Description
 In previous versions, configuration was done under `sensor`.
 This is now deprecated and will generate a warning at startup.
 It should be converted to the new `illuminance` format as described above.
+Or simply remove it and add the sensor(s) via the UI.
 
 Here is an example of the old format:
 
