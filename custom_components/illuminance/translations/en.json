@@ -1,0 +1,49 @@
+{
+    "title": "Illuminance",
+    "config": {
+        "step": {
+            "options": {
+                "title": "Illuminance Options",
+                "data": {
+                    "mode": "Mode",
+                    "entity_id": "Weather data source",
+                    "scan_interval": "Update period in minutes",
+                    "fallback": "Illuminance divider when no weather data"
+                }
+            },
+            "name": {
+                "title": "Name",
+                "data": {
+                    "name": "Name"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "options": {
+                "title": "Illuminance Options",
+                "data": {
+                    "mode": "Mode",
+                    "entity_id": "Weather data source",
+                    "scan_interval": "Update period in minutes",
+                    "fallback": "Illuminance divider when no weather data"
+                }
+            }
+        }
+    },
+    "selector": {
+        "mode": {
+            "options": {
+                "normal": "Normal",
+                "simple": "Simple"
+            }
+        }
+    },
+    "services": {
+        "reload": {
+            "name": "Reload",
+            "description": "Reloads Illuminance from the YAML-configuration."
+        }
+    }
+}

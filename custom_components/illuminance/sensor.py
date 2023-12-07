@@ -1,12 +1,11 @@
-"""
-Illuminance Sensor.
+"""Illuminance Sensor.
 
 A Sensor platform that estimates outdoor illuminance from current weather conditions.
 """
 from __future__ import annotations
 
 import asyncio
-from collections.abc import Mapping, Sequence
+from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import Enum, IntEnum, auto
@@ -44,32 +43,42 @@ from homeassistant.components.weather import (
     ATTR_CONDITION_WINDY,
     ATTR_CONDITION_WINDY_VARIANT,
 )
+from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import (
     ATTR_ATTRIBUTION,
     CONF_ENTITY_ID,
     CONF_MODE,
     CONF_NAME,
+    CONF_PLATFORM,
     CONF_SCAN_INTERVAL,
-    EVENT_CORE_CONFIG_UPDATE,
     LIGHT_LUX,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
 )
-from homeassistant.core import HomeAssistant, Event, State, callback
+from homeassistant.core import Event, HomeAssistant, State, callback
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.device_registry import DeviceEntryType
+
+# Device Info moved to device_registry in 2023.9
+try:
+    from homeassistant.helpers.device_registry import DeviceInfo
+except ImportError:
+    from homeassistant.helpers.entity import DeviceInfo  # type: ignore[attr-defined]
+
+from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
 from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.sun import get_astral_location
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 import homeassistant.util.dt as dt_util
 
-DOMAIN = "illuminance"
-DEFAULT_NAME = "Illuminance"
-MIN_SCAN_INTERVAL = timedelta(minutes=5)
-DEFAULT_SCAN_INTERVAL = timedelta(minutes=5)
-DEFAULT_FALLBACK = 10
-
-CONF_FALLBACK = "fallback"
+from .const import (
+    CONF_FALLBACK,
+    DEFAULT_FALLBACK,
+    DEFAULT_NAME,
+    DEFAULT_SCAN_INTERVAL,
+    DOMAIN,
+    MIN_SCAN_INTERVAL,
+)
 
 # Standard sk to conditions mapping
 
@@ -122,19 +131,20 @@ class Mode(Enum):
     simple = auto()
 
 
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(
-    {
-        vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
-        vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
-            cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)
-        ),
-        vol.Required(CONF_ENTITY_ID): cv.entity_id,
-        vol.Optional(CONF_MODE, default=Mode.normal.name): cv.enum(Mode),
-        vol.Optional(CONF_FALLBACK, default=DEFAULT_FALLBACK): vol.All(
-            vol.Coerce(float), vol.Range(1, 10)
-        ),
-    }
-)
+MODES = list(Mode.__members__)
+
+ILLUMINANCE_SCHEMA = {
+    vol.Optional(CONF_NAME, default=DEFAULT_NAME): cv.string,
+    vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
+        cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)
+    ),
+    vol.Required(CONF_ENTITY_ID): cv.entity_id,
+    vol.Optional(CONF_MODE, default=MODES[0]): vol.In(MODES),
+    vol.Optional(CONF_FALLBACK, default=DEFAULT_FALLBACK): vol.All(
+        vol.Coerce(float), vol.Range(1, 10)
+    ),
+}
+PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
 
 _20_MIN = timedelta(minutes=20)
 _40_MIN = timedelta(minutes=40)
@@ -149,6 +159,30 @@ class IlluminanceSensorEntityDescription(SensorEntityDescription):
     weather_entity: str | None = None
     mode: Mode | None = None
     fallback: float | None = None
+    unique_id: str | None = None
+    scan_interval: timedelta | None = None
+
+
+def _sensor(
+    config: ConfigType,
+    unique_id: str | None = None,
+    scan_interval: timedelta | None = None,
+) -> Entity:
+    """Create entity to add."""
+    entity_description = IlluminanceSensorEntityDescription(
+        DOMAIN,
+        device_class=SensorDeviceClass.ILLUMINANCE,
+        name=cast(str, config[CONF_NAME]),
+        native_unit_of_measurement=LIGHT_LUX,
+        state_class=SensorStateClass.MEASUREMENT,
+        weather_entity=cast(str, config[CONF_ENTITY_ID]),
+        mode=Mode.__getitem__(cast(str, config[CONF_MODE])),
+        fallback=cast(float, config[CONF_FALLBACK]),
+        unique_id=unique_id,
+        scan_interval=scan_interval,
+    )
+
+    return IlluminanceSensor(entity_description)
 
 
 async def async_setup_platform(
@@ -158,27 +192,28 @@ async def async_setup_platform(
     discovery_info: DiscoveryInfoType | None = None,
 ) -> None:
     """Set up sensors."""
-
-    def get_loc_elev(event: Event | None = None) -> None:
-        """Get HA Location object & elevation."""
-        hass.data[DOMAIN] = get_astral_location(hass)
-
-    if DOMAIN not in hass.data:
-        get_loc_elev()
-        hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, get_loc_elev)
-
-    entity_description = IlluminanceSensorEntityDescription(
+    _LOGGER.warning(
+        "%s: %s under %s is deprecated. Move to %s:",
+        CONF_PLATFORM,
         DOMAIN,
-        device_class=SensorDeviceClass.ILLUMINANCE,
-        name=config[CONF_NAME],
-        native_unit_of_measurement=LIGHT_LUX,
-        state_class=SensorStateClass.MEASUREMENT,
-        weather_entity=cast(str, config[CONF_ENTITY_ID]),
-        mode=cast(Mode, config[CONF_MODE]),
-        fallback=cast(float, config[CONF_FALLBACK]),
+        SENSOR_DOMAIN,
+        DOMAIN,
     )
 
-    async_add_entities([IlluminanceSensor(entity_description)], True)
+    async_add_entities([_sensor(config)], True)
+
+
+async def async_setup_entry(
+    hass: HomeAssistant,
+    entry: ConfigEntry,
+    async_add_entities: AddEntitiesCallback,
+) -> None:
+    """Set up the sensor platform."""
+    config = dict(entry.options)
+    config[CONF_NAME] = entry.title
+    unique_id = entry.unique_id or entry.entry_id
+    scan_interval = timedelta(minutes=config[CONF_SCAN_INTERVAL])
+    async_add_entities([_sensor(config, unique_id, scan_interval)], True)
 
 
 def _illumiance(elev: Num) -> float:
@@ -212,6 +247,11 @@ class IlluminanceSensor(SensorEntity):
     """Illuminance sensor."""
 
     entity_description: IlluminanceSensorEntityDescription
+    _attr_device_info = DeviceInfo(
+        entry_type=DeviceEntryType.SERVICE,
+        identifiers={(DOMAIN, DOMAIN)},
+        name=DOMAIN.title(),
+    )
     _entity_status = EntityStatus.NOT_SEEN
     _sk_mapping: Sequence[tuple[Num, Sequence[str]]] | None = None
     _sk: Num
@@ -222,7 +262,10 @@ class IlluminanceSensor(SensorEntity):
     def __init__(self, entity_description: IlluminanceSensorEntityDescription) -> None:
         """Initialize sensor."""
         self.entity_description = entity_description
-        self._attr_unique_id = entity_description.name
+        if entity_description.unique_id:
+            self._attr_unique_id = entity_description.unique_id
+        else:
+            self._attr_unique_id = cast(str, entity_description.name)
 
     @property
     def weather_entity(self) -> str:
@@ -249,6 +292,8 @@ class IlluminanceSensor(SensorEntity):
         """Start adding an entity to a platform."""
         # This method is called before first call to async_update.
 
+        if self.entity_description.scan_interval:
+            platform.scan_interval = self.entity_description.scan_interval
         super().add_to_platform_start(hass, platform, parallel_updates)
 
         # Now that parent method has been called, self.hass has been initialized.
