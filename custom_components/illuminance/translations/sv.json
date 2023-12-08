@@ -1,0 +1,49 @@
+{
+    "title": "Illuminance",
+    "config": {
+        "step": {
+            "options": {
+                "title": "Illuminance Alternativ",
+                "data": {
+                    "mode": "Läge",
+                    "entity_id": "Väderdata Källa",
+                    "scan_interval": "Uppdateringsperiod i minuter",
+                    "fallback": "Illuminance delning när väderdata inte är tillgänglig"
+                }
+            },
+            "name": {
+                "title": "Namn",
+                "data": {
+                    "name": "Namn"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "options": {
+                "title": "Illuminance Alternativ",
+                "data": {
+                    "mode": "Läge",
+                    "entity_id": "Väderdata Källa",
+                    "scan_interval": "Uppdateringsperiod i minuter",
+                    "fallback": "Illuminance delning när väderdata inte är tillgänglig"
+                }
+            }
+        }
+    },
+    "selector": {
+        "mode": {
+            "options": {
+                "normal": "Normal",
+                "simple": "Simpel"
+            }
+        }
+    },
+    "services": {
+        "reload": {
+            "name": "Ladda om",
+            "description": "Laddar om Illuminance från YAML-konfigurationen."
+        }
+    }
+}
