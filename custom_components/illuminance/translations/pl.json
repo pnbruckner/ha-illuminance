@@ -1,0 +1,49 @@
+{
+    "title": "Natężenie oświetlenia",
+    "config": {
+        "step": {
+            "options": {
+                "title": "Opcje natężenia światła",
+                "data": {
+                    "mode": "Tryb",
+                    "entity_id": "Źródło danych pogodowych",
+                    "scan_interval": "Okres aktualizacji w minutach",
+                    "fallback": "Dzielnik natężenia oświetlenia w przypadku braku danych pogodowych"
+                }
+            },
+            "name": {
+                "title": "Nazwa",
+                "data": {
+                    "name": "Nazwa"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "options": {
+                "title": "Opcje natężenia światła",
+                "data": {
+                    "mode": "Tryb",
+                    "entity_id": "Źródło danych pogodowych",
+                    "scan_interval": "Okres aktualizacji w minutach",
+                    "fallback": "Dzielnik natężenia oświetlenia w przypadku braku danych pogodowych"
+                }
+            }
+        }
+    },
+    "selector": {
+        "mode": {
+            "options": {
+                "normal": "Normalny",
+                "simple": "Prosty"
+            }
+        }
+    },
+    "services": {
+        "reload": {
+            "name": "Przeładowanie",
+            "description": "Ponownie załadowuje natężenie oświetlenia z konfiguracji YAML."
+        }
+    }
+}
