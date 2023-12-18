@@ -1,0 +1,49 @@
+{
+    "title": "Illuminazione",
+    "config": {
+        "step": {
+            "options": {
+                "title": "Opzioni Illuminance",
+                "data": {
+                    "mode": "Modalità",
+                    "entity_id": "Sorgente dati meteorologici",
+                    "scan_interval": "Periodo di aggiornamento in minuti",
+                    "fallback": "Divisore illuminazione in assenza di dati meteorologici"
+                }
+            },
+            "name": {
+                "title": "Nome",
+                "data": {
+                    "name": "Nome"
+                }
+            }
+        }
+    },
+    "options": {
+        "step": {
+            "options": {
+                "title": "Opzioni Illuminance",
+                "data": {
+                    "mode": "Modalità",
+                    "entity_id": "Sorgente dati meteorologici",
+                    "scan_interval": "Periodo di aggiornamento in minuti",
+                    "fallback": "Divisore illuminazione in assenza di dati meteorologici"
+                }
+            }
+        }
+    },
+    "selector": {
+        "mode": {
+            "options": {
+                "normal": "Normale",
+                "simple": "Semplice"
+            }
+        }
+    },
+    "services": {
+        "reload": {
+            "name": "Ricarica",
+            "description": "Ricarica Illuminance dalla configurazione YAML."
+        }
+    }
+}
