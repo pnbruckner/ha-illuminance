@@ -74,7 +74,7 @@ class IlluminanceFlow(FlowHandler):
                 default=self.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MIN),
             ): NumberSelector(
                 NumberSelectorConfig(
-                    min=MIN_SCAN_INTERVAL_MIN, mode=NumberSelectorMode.BOX
+                    min=MIN_SCAN_INTERVAL_MIN, step=0.5, mode=NumberSelectorMode.BOX
                 )
             ),
             vol.Required(
