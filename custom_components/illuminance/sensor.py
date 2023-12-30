@@ -152,7 +152,7 @@ _40_MIN = timedelta(minutes=40)
 Num = Union[float, int]
 
 
-@dataclass(frozen=True, kw_only=True)
+@dataclass
 class IlluminanceSensorEntityDescription(SensorEntityDescription):
     """Illuminance sensor entity description."""
 
