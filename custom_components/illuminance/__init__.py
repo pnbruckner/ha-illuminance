@@ -99,6 +99,8 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
 
 async def entry_updated(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Handle config entry update."""
+    if not entry.state.recoverable:
+        return
     await hass.config_entries.async_reload(entry.entry_id)
 
 

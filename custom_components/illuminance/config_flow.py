@@ -132,12 +132,9 @@ class IlluminanceConfigFlow(ConfigFlow, IlluminanceFlow, domain=DOMAIN):
             cast(timedelta, data[CONF_SCAN_INTERVAL]).total_seconds() / 60
         )
         if existing_entry := await self.async_set_unique_id(data.pop(CONF_UNIQUE_ID)):
-            if not self.hass.config_entries.async_update_entry(
+            self.hass.config_entries.async_update_entry(
                 existing_entry, title=title, options=data
-            ):
-                self.hass.async_create_task(
-                    self.hass.config_entries.async_reload(existing_entry.entry_id)
-                )
+            )
             return self.async_abort(reason="already_configured")
 
         return self.async_create_entry(title=title, data={}, options=data)
