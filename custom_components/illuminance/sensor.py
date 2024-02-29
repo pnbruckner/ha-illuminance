@@ -153,7 +153,7 @@ Num = Union[float, int]
 
 
 @dataclass
-class IlluminanceSensorEntityDescription(SensorEntityDescription):
+class IlluminanceSensorEntityDescription(SensorEntityDescription):  # type: ignore[misc]
     """Illuminance sensor entity description."""
 
     weather_entity: str | None = None
