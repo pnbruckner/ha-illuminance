@@ -411,13 +411,10 @@ class IlluminanceSensor(SensorEntity):
 
         if self._entity_status == EntityStatus.OK_CLOUD:
             try:
-                cloud = float(condition)
-                if not 0 <= cloud <= 100:
-                    raise ValueError
+                cloud = min(max(0, float(condition)), 100)
             except ValueError:
                 _LOGGER.error(
-                    "%s: Cloud coverage sensor state "
-                    "is not a number between 0 and 100: %s",
+                    "%s: Cloud coverage sensor state is not a number: %s",
                     self.name,
                     condition,
                 )
