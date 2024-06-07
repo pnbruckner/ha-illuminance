@@ -50,9 +50,23 @@ PLATFORMS = [Platform.SENSOR]
 async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
     """Set up composite integration."""
 
-    def get_loc_elev(event: Event | None = None) -> None:
+    async def async_get_loc_elev(event: Event | None = None) -> None:
         """Get HA Location object & elevation."""
-        hass.data[DOMAIN] = get_astral_location(hass)
+        if event is not None and not event.data:
+            return
+
+        def get_loc_elev() -> None:
+            """Get HA Location object & elevation.
+
+            Then get Location's tzinfo to force pytz, which it calls indirectly, to do
+            its file I/O that it does when it sees a new time zone. This needs to be
+            done in an executor.
+            """
+            loc, elv = get_astral_location(hass)
+            loc.tzinfo  # noqa: B018
+            hass.data[DOMAIN] = loc, elv
+
+        await hass.async_add_executor_job(get_loc_elev)
 
     async def process_config(
         config: ConfigType | None, run_immediately: bool = True
@@ -89,10 +103,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         """Reload configuration."""
         await process_config(await async_integration_yaml_config(hass, DOMAIN))
 
-    get_loc_elev()
+    await async_get_loc_elev()
     await process_config(config, run_immediately=False)
     async_register_admin_service(hass, DOMAIN, SERVICE_RELOAD, reload_config)
-    hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, get_loc_elev)
+    hass.bus.async_listen(EVENT_CORE_CONFIG_UPDATE, async_get_loc_elev)
 
     return True
 
