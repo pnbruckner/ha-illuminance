@@ -138,11 +138,9 @@ ILLUMINANCE_SCHEMA = {
     vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
         cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)
     ),
-    vol.Required(CONF_ENTITY_ID): cv.entity_id,
+    vol.Optional(CONF_ENTITY_ID): cv.entity_id,
     vol.Optional(CONF_MODE, default=MODES[0]): vol.In(MODES),
-    vol.Optional(CONF_FALLBACK, default=DEFAULT_FALLBACK): vol.All(
-        vol.Coerce(float), vol.Range(1, 10)
-    ),
+    vol.Optional(CONF_FALLBACK): vol.All(vol.Coerce(float), vol.Range(1, 10)),
 }
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
 
@@ -169,15 +167,20 @@ def _sensor(
     scan_interval: timedelta | None = None,
 ) -> Entity:
     """Create entity to add."""
+    weather_entity = config.get(CONF_ENTITY_ID)
+    fallback = cast(
+        float,
+        config.get(CONF_FALLBACK, DEFAULT_FALLBACK if weather_entity else 1)
+    )
     entity_description = IlluminanceSensorEntityDescription(
         key=DOMAIN,
         device_class=SensorDeviceClass.ILLUMINANCE,
         name=cast(str, config[CONF_NAME]),
         native_unit_of_measurement=LIGHT_LUX,
         state_class=SensorStateClass.MEASUREMENT,
-        weather_entity=cast(str, config[CONF_ENTITY_ID]),
+        weather_entity=weather_entity,
         mode=Mode.__getitem__(cast(str, config[CONF_MODE])),
-        fallback=cast(float, config[CONF_FALLBACK]),
+        fallback=fallback,
         unique_id=unique_id,
         scan_interval=scan_interval,
     )
@@ -268,9 +271,9 @@ class IlluminanceSensor(SensorEntity):
             self._attr_unique_id = cast(str, entity_description.name)
 
     @property
-    def weather_entity(self) -> str:
+    def weather_entity(self) -> str | None:
         """Input weather entity ID."""
-        return cast(str, self.entity_description.weather_entity)
+        return self.entity_description.weather_entity
 
     @property
     def mode(self) -> Mode:
@@ -298,7 +301,11 @@ class IlluminanceSensor(SensorEntity):
 
         # Now that parent method has been called, self.hass has been initialized.
 
-        self._get_divisor_from_weather_data(hass.states.get(self.weather_entity))
+        self._get_divisor_from_weather_data(
+            hass.states.get(self.weather_entity) if self.weather_entity else None
+        )
+        if not self.weather_entity:
+            return
 
         @callback
         def sensor_state_listener(event: Event) -> None:
@@ -324,7 +331,8 @@ class IlluminanceSensor(SensorEntity):
     async def async_update(self) -> None:
         """Update state."""
         if (
-            self._entity_status <= EntityStatus.NO_ATTRIBUTION
+            self.weather_entity
+            and self._entity_status <= EntityStatus.NO_ATTRIBUTION
             and not self.hass.is_running
         ):
             return
@@ -355,7 +363,7 @@ class IlluminanceSensor(SensorEntity):
         self._cond_desc = "without weather data"
         self._sk = self.fallback
 
-        if self._entity_status == EntityStatus.BAD:
+        if not self.weather_entity or self._entity_status == EntityStatus.BAD:
             return
 
         condition = entity_state and entity_state.state
