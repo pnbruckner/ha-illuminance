@@ -36,7 +36,8 @@
         "mode": {
             "options": {
                 "normal": "Normale",
-                "simple": "Semplice"
+                "simple": "Semplice",
+                "irradiance": "Irradianza"
             }
         }
     },

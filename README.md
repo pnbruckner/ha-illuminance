@@ -94,7 +94,7 @@ Key | Optional | Description
 `unique_id` | no | Unique identifier for sensor. This allows any of the remaining options to be changed without looking like a new sensor. (Only required for YAML-based configuration.)
 `entity_id` | yes | Entity ID of another entity that indicates current weather conditions or cloud coverage percentage
 `fallback` | yes | Illuminance divisor to use when weather data is not available. Must be in the range of 1 (clear) through 10 (dark.) Default is 10 if `entity_id` is used, or 1 if not.
-`mode` | yes | Mode of operation. Choices are `normal` (default) which uses sun elevation, and `simple` which uses time of day.
+`mode` | yes | Mode of operation. Choices are `normal` (default) which uses sun elevation, `simple` which uses time of day and `irradiance` which is the same as `normal`, except the value is expressed as irradiance in Watts/M².
 `name` | yes | Name of the sensor. Default is `Illuminance`.
 `scan_interval` | yes | Update interval. Minimum is 30 seconds. Default is 5 minutes.
 

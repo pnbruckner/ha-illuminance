@@ -36,7 +36,8 @@
         "mode": {
             "options": {
                 "normal": "Normal",
-                "simple": "Simpel"
+                "simple": "Simpel",
+                "irradiance": "Bestrålning"
             }
         }
     },
