@@ -57,35 +57,48 @@ class IlluminanceFlow(FlowHandler):
     ) -> FlowResult:
         """Get sensor options."""
         if user_input is not None:
+            self.options.clear()
             self.options.update(user_input)
             return await self.async_step_done()
 
-        schema = {
-            vol.Required(
-                CONF_MODE, default=self.options.get(CONF_MODE, MODES[0])
-            ): SelectSelector(
-                SelectSelectorConfig(options=MODES, translation_key="mode")
-            ),
-            vol.Required(
-                CONF_ENTITY_ID, default=self.options.get(CONF_ENTITY_ID, vol.UNDEFINED)
-            ): EntitySelector(EntitySelectorConfig(domain=["sensor", "weather"])),
-            vol.Required(
-                CONF_SCAN_INTERVAL,
-                default=self.options.get(CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MIN),
-            ): NumberSelector(
-                NumberSelectorConfig(
-                    min=MIN_SCAN_INTERVAL_MIN, step=0.5, mode=NumberSelectorMode.BOX
-                )
-            ),
-            vol.Required(
-                CONF_FALLBACK, default=self.options.get(CONF_FALLBACK, DEFAULT_FALLBACK)
-            ): NumberSelector(
-                NumberSelectorConfig(
-                    min=1, max=10, step="any", mode=NumberSelectorMode.BOX
-                )
-            ),
-        }
-        return self.async_show_form(step_id="options", data_schema=vol.Schema(schema))
+        data_schema = vol.Schema(
+            {
+                vol.Required(CONF_MODE): SelectSelector(
+                    SelectSelectorConfig(options=MODES, translation_key="mode")
+                ),
+                vol.Required(CONF_SCAN_INTERVAL): NumberSelector(
+                    NumberSelectorConfig(
+                        min=MIN_SCAN_INTERVAL_MIN, step=0.5, mode=NumberSelectorMode.BOX
+                    )
+                ),
+                vol.Optional(CONF_ENTITY_ID): EntitySelector(
+                    EntitySelectorConfig(domain=["sensor", "weather"])
+                ),
+                vol.Optional(CONF_FALLBACK): NumberSelector(
+                    NumberSelectorConfig(
+                        min=1, max=10, step="any", mode=NumberSelectorMode.BOX
+                    )
+                ),
+            }
+        )
+        data_schema = self.add_suggested_values_to_schema(
+            data_schema,
+            {
+                CONF_MODE: self.options.get(CONF_MODE, MODES[0]),
+                CONF_SCAN_INTERVAL: self.options.get(
+                    CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MIN
+                ),
+            },
+        )
+        if (entity_id := self.options.get(CONF_ENTITY_ID)) is not None:
+            data_schema = self.add_suggested_values_to_schema(
+                data_schema, {CONF_ENTITY_ID: entity_id}
+            )
+        if (fallback := self.options.get(CONF_FALLBACK)) is not None:
+            data_schema = self.add_suggested_values_to_schema(
+                data_schema, {CONF_FALLBACK: fallback}
+            )
+        return self.async_show_form(step_id="options", data_schema=data_schema)
 
     @abstractmethod
     async def async_step_done(self, _: dict[str, Any] | None = None) -> FlowResult:

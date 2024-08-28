@@ -4,6 +4,7 @@
         "step": {
             "options": {
                 "title": "Illuminance Options",
+                "description": "Default divider is 1 if no weather data source selected, and 10 if one is selected.",
                 "data": {
                     "mode": "Mode",
                     "entity_id": "Weather data source",
@@ -23,6 +24,7 @@
         "step": {
             "options": {
                 "title": "Illuminance Options",
+                "description": "Default divider is 1 if no weather data source selected, and 10 if one is selected.",
                 "data": {
                     "mode": "Mode",
                     "entity_id": "Weather data source",
@@ -36,7 +38,8 @@
         "mode": {
             "options": {
                 "normal": "Normal",
-                "simple": "Simple"
+                "simple": "Simple",
+                "irradiance": "Irradiance"
             }
         }
     },

@@ -4,9 +4,9 @@
   "codeowners": ["@pnbruckner"],
   "config_flow": true,
   "dependencies": [],
-  "documentation": "https://github.com/pnbruckner/ha-illuminance/5.4.3/master/README.md",
+  "documentation": "https://github.com/pnbruckner/ha-illuminance/5.5.0b1/master/README.md",
   "iot_class": "calculated",
   "issue_tracker": "https://github.com/pnbruckner/ha-illuminance/issues",
   "requirements": [],
-  "version": "5.4.3"
+  "version": "5.5.0b1"
 }

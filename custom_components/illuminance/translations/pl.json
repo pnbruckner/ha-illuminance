@@ -36,7 +36,8 @@
         "mode": {
             "options": {
                 "normal": "Normalny",
-                "simple": "Prosty"
+                "simple": "Prosty",
+                "irradiance": "Natężenie promieniowania"
             }
         }
     },

@@ -9,6 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import Enum, IntEnum, auto
+from functools import cached_property
 import logging
 from math import asin, cos, exp, radians, sin
 import re
@@ -54,6 +55,7 @@ from homeassistant.const import (
     LIGHT_LUX,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
+    UnitOfIrradiance,
 )
 from homeassistant.core import Event, HomeAssistant, State, callback
 import homeassistant.helpers.config_validation as cv
@@ -77,6 +79,7 @@ from .const import (
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL,
     DOMAIN,
+    LUX_PER_WPSM,
     MIN_SCAN_INTERVAL,
 )
 
@@ -129,6 +132,7 @@ class Mode(Enum):
 
     normal = auto()
     simple = auto()
+    irradiance = auto()
 
 
 MODES = list(Mode.__members__)
@@ -138,11 +142,9 @@ ILLUMINANCE_SCHEMA = {
     vol.Optional(CONF_SCAN_INTERVAL, default=DEFAULT_SCAN_INTERVAL): vol.All(
         cv.time_period, vol.Range(min=MIN_SCAN_INTERVAL)
     ),
-    vol.Required(CONF_ENTITY_ID): cv.entity_id,
+    vol.Optional(CONF_ENTITY_ID): cv.entity_id,
     vol.Optional(CONF_MODE, default=MODES[0]): vol.In(MODES),
-    vol.Optional(CONF_FALLBACK, default=DEFAULT_FALLBACK): vol.All(
-        vol.Coerce(float), vol.Range(1, 10)
-    ),
+    vol.Optional(CONF_FALLBACK): vol.All(vol.Coerce(float), vol.Range(1, 10)),
 }
 PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
 
@@ -169,15 +171,29 @@ def _sensor(
     scan_interval: timedelta | None = None,
 ) -> Entity:
     """Create entity to add."""
+    weather_entity = config.get(CONF_ENTITY_ID)
+    fallback = cast(
+        float,
+        config.get(CONF_FALLBACK, DEFAULT_FALLBACK if weather_entity else 1)
+    )
+    if (mode := Mode.__getitem__(cast(str, config[CONF_MODE]))) is Mode.irradiance:
+        device_class = SensorDeviceClass.IRRADIANCE
+        native_unit_of_measurement = UnitOfIrradiance.WATTS_PER_SQUARE_METER
+        suggested_display_precision = 1
+    else:
+        device_class = SensorDeviceClass.ILLUMINANCE
+        native_unit_of_measurement = LIGHT_LUX
+        suggested_display_precision = 0
     entity_description = IlluminanceSensorEntityDescription(
         key=DOMAIN,
-        device_class=SensorDeviceClass.ILLUMINANCE,
+        device_class=device_class,
         name=cast(str, config[CONF_NAME]),
-        native_unit_of_measurement=LIGHT_LUX,
+        native_unit_of_measurement=native_unit_of_measurement,
         state_class=SensorStateClass.MEASUREMENT,
-        weather_entity=cast(str, config[CONF_ENTITY_ID]),
-        mode=Mode.__getitem__(cast(str, config[CONF_MODE])),
-        fallback=cast(float, config[CONF_FALLBACK]),
+        suggested_display_precision=suggested_display_precision,
+        weather_entity=weather_entity,
+        mode=mode,
+        fallback=fallback,
         unique_id=unique_id,
         scan_interval=scan_interval,
     )
@@ -267,17 +283,17 @@ class IlluminanceSensor(SensorEntity):
         else:
             self._attr_unique_id = cast(str, entity_description.name)
 
-    @property
-    def weather_entity(self) -> str:
+    @cached_property
+    def weather_entity(self) -> str | None:
         """Input weather entity ID."""
-        return cast(str, self.entity_description.weather_entity)
+        return self.entity_description.weather_entity
 
-    @property
+    @cached_property
     def mode(self) -> Mode:
         """Illuminance calculation mode."""
         return cast(Mode, self.entity_description.mode)
 
-    @property
+    @cached_property
     def fallback(self) -> float:
         """Fallback illuminance divisor."""
         return cast(float, self.entity_description.fallback)
@@ -292,13 +308,19 @@ class IlluminanceSensor(SensorEntity):
         """Start adding an entity to a platform."""
         # This method is called before first call to async_update.
 
-        if self.entity_description.scan_interval:
-            platform.scan_interval = self.entity_description.scan_interval
+        if (scan_interval := self.entity_description.scan_interval) is not None:
+            platform.scan_interval = scan_interval
+            if hasattr(platform, "scan_interval_seconds"):
+                platform.scan_interval_seconds = scan_interval.total_seconds()
         super().add_to_platform_start(hass, platform, parallel_updates)
 
         # Now that parent method has been called, self.hass has been initialized.
 
-        self._get_divisor_from_weather_data(hass.states.get(self.weather_entity))
+        self._get_divisor_from_weather_data(
+            hass.states.get(self.weather_entity) if self.weather_entity else None
+        )
+        if not self.weather_entity:
+            return
 
         @callback
         def sensor_state_listener(event: Event) -> None:
@@ -324,28 +346,33 @@ class IlluminanceSensor(SensorEntity):
     async def async_update(self) -> None:
         """Update state."""
         if (
-            self._entity_status <= EntityStatus.NO_ATTRIBUTION
+            self.weather_entity
+            and self._entity_status <= EntityStatus.NO_ATTRIBUTION
             and not self.hass.is_running
         ):
             return
 
         try:
-            illuminance = self._calculate_illuminance(
+            value = self._calculate_illuminance(
                 dt_util.now().replace(microsecond=0)
             )
         except AbortUpdate:
             return
 
-        # Calculate final illuminance.
+        if self.mode is Mode.irradiance:
+            value /= LUX_PER_WPSM
 
-        self._attr_native_value = round(illuminance / self._sk)
+        # Calculate final value.
+
+        self._attr_native_value = value / self._sk
+        display_precision = self._sensor_option_display_precision or 0
         _LOGGER.debug(
-            "%s: Updating %s -> %i / %0.1f = %i",
+            "%s: Updating %s -> %s / %0.2f = %s",
             self.name,
             self._cond_desc,
-            round(illuminance),
+            f"{value:0.{display_precision}f}",
             self._sk,
-            self._attr_native_value,
+            f"{self._attr_native_value:0.{display_precision}f}",
         )
 
     def _get_divisor_from_weather_data(self, entity_state: State | None) -> None:
@@ -355,7 +382,7 @@ class IlluminanceSensor(SensorEntity):
         self._cond_desc = "without weather data"
         self._sk = self.fallback
 
-        if self._entity_status == EntityStatus.BAD:
+        if not self.weather_entity or self._entity_status == EntityStatus.BAD:
             return
 
         condition = entity_state and entity_state.state
@@ -447,7 +474,7 @@ class IlluminanceSensor(SensorEntity):
 
     def _calculate_illuminance(self, now: datetime) -> Num:
         """Calculate sunny illuminance."""
-        if self.mode is Mode.normal:
+        if self.mode is not Mode.simple:
             return _illumiance(cast(Num, self._astral_event("solar_elevation", now)))
 
         sun_factor = self._sun_factor(now)
