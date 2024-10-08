@@ -35,7 +35,6 @@ from homeassistant.helpers.selector import (
 
 from .const import (
     CONF_FALLBACK,
-    DEFAULT_FALLBACK,
     DEFAULT_NAME,
     DEFAULT_SCAN_INTERVAL_MIN,
     DOMAIN,

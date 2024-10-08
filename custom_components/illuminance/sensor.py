@@ -13,7 +13,7 @@ from functools import cached_property
 import logging
 from math import asin, cos, exp, radians, sin
 import re
-from typing import Any, Union, cast
+from typing import Any, cast
 
 from astral import Elevation
 from astral.location import Location
@@ -151,7 +151,7 @@ PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
 _20_MIN = timedelta(minutes=20)
 _40_MIN = timedelta(minutes=40)
 
-Num = Union[float, int]
+Num = float | int
 
 
 @dataclass
@@ -173,8 +173,7 @@ def _sensor(
     """Create entity to add."""
     weather_entity = config.get(CONF_ENTITY_ID)
     fallback = cast(
-        float,
-        config.get(CONF_FALLBACK, DEFAULT_FALLBACK if weather_entity else 1)
+        float, config.get(CONF_FALLBACK, DEFAULT_FALLBACK if weather_entity else 1)
     )
     if (mode := Mode.__getitem__(cast(str, config[CONF_MODE]))) is Mode.irradiance:
         device_class = SensorDeviceClass.IRRADIANCE
@@ -254,9 +253,8 @@ class EntityStatus(IntEnum):
 
     NOT_SEEN = 0
     NO_ATTRIBUTION = 1
-    BAD = 2
-    OK_CLOUD = 3
-    OK_CONDITION = 4
+    OK_CLOUD = 2
+    OK_CONDITION = 3
 
 
 class IlluminanceSensor(SensorEntity):
@@ -353,9 +351,7 @@ class IlluminanceSensor(SensorEntity):
             return
 
         try:
-            value = self._calculate_illuminance(
-                dt_util.now().replace(microsecond=0)
-            )
+            value = self._calculate_illuminance(dt_util.now().replace(microsecond=0))
         except AbortUpdate:
             return
 
@@ -382,7 +378,7 @@ class IlluminanceSensor(SensorEntity):
         self._cond_desc = "without weather data"
         self._sk = self.fallback
 
-        if not self.weather_entity or self._entity_status == EntityStatus.BAD:
+        if not self.weather_entity:
             return
 
         condition = entity_state and entity_state.state
@@ -404,7 +400,7 @@ class IlluminanceSensor(SensorEntity):
                     )
                 except ValueError:
                     attribution = cast(
-                        Union[str, None], entity_state.attributes.get(ATTR_ATTRIBUTION)
+                        str | None, entity_state.attributes.get(ATTR_ATTRIBUTION)
                     )
                     self._get_mappings(attribution, entity_state.domain)
                     if self._entity_status == EntityStatus.OK_CONDITION:
@@ -418,15 +414,19 @@ class IlluminanceSensor(SensorEntity):
 
             if self._entity_status <= EntityStatus.NO_ATTRIBUTION:
                 if self.hass.is_running:
-                    _LOGGER.error(
-                        "%s: Unsupported sensor %s: "
-                        "not a number, no %s attribute, or doesn't exist",
+                    _LOGGER.warning(
+                        "%s: Sensor %s: "
+                        "not a number, no %s attribute, or doesn't exist"
+                        "; will use standard condition mappings",
                         self.name,
                         self.weather_entity,
                         ATTR_ATTRIBUTION,
                     )
-                    self._entity_status = EntityStatus.BAD
-                return
+                    self._warned = True
+                    self._sk_mapping = MAPPING
+                    self._entity_status = EntityStatus.OK_CONDITION
+                else:
+                    return
 
         if condition:
             self._warned = False
