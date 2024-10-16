@@ -414,7 +414,7 @@ class IlluminanceSensor(SensorEntity):
 
             if self._entity_status <= EntityStatus.NO_ATTRIBUTION:
                 if self.hass.is_running:
-                    _LOGGER.warning(
+                    _LOGGER.debug(
                         "%s: Sensor %s: "
                         "not a number, no %s attribute, or doesn't exist"
                         "; will use standard condition mappings",
