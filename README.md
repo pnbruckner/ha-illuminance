@@ -4,10 +4,11 @@ In either case, the value can be further adjusted based on current weather condi
 
 
 ## Modes of operation
-Two modes are available: normal & simple.
+Three modes are available: normal, irradiance & simple.
 
-### Normal mode - Sun elevation
-This mode uses an algorithm from the US Naval Observatory[^1] for estimating sun illuminance based on the sun's elevation (aka altitude.) The maximum value is about 150,000 lx. Below is an example of what that might look like over a three day period.
+### Normal/Irradiance modes - Sun elevation
+These modes use an algorithm from the US Naval Observatory[^1] for estimating sun illuminance or irradiance based on the sun's elevation (aka altitude.) The maximum illuminance value is about 150,000 lx, and the maximum irradiance value is about 1,250 Watts/M².
+Below is an example of what the illuminance might look like over a three day period.
 
 <p align="center">
   <img src=images/normal.png>
