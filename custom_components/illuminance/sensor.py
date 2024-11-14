@@ -351,7 +351,7 @@ class IlluminanceSensor(SensorEntity):
             return
 
         try:
-            value = self._calculate_illuminance(dt_util.now().replace(microsecond=0))
+            value = self._calculate_illuminance(dt_util.utcnow().replace(microsecond=0))
         except AbortUpdate:
             return
 
@@ -492,11 +492,13 @@ class IlluminanceSensor(SensorEntity):
     def _astral_event(self, event: str, date_or_dt: date | datetime) -> Any:
         """Get astral event."""
         loc, elev = cast(tuple[Location, Elevation], self.hass.data[DOMAIN])
-        return getattr(loc, event)(date_or_dt, observer_elevation=elev)
+        if event == "solar_elevation":
+            return getattr(loc, event)(date_or_dt, observer_elevation=elev)
+        return getattr(loc, event)(date_or_dt, local=False, observer_elevation=elev)
 
     def _sun_factor(self, now: datetime) -> Num:
         """Calculate sun factor."""
-        now_date = now.date()
+        now_date = dt_util.as_local(now).date()
 
         if self._sun_data and self._sun_data[0] == now_date:
             (sunrise_begin, sunrise_end, sunset_begin, sunset_end) = self._sun_data[1]
