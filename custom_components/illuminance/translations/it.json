@@ -19,6 +19,11 @@
             }
         }
     },
+    "device": {
+        "service": {
+            "name": "Illuminazione"
+        }
+    },
     "options": {
         "step": {
             "options": {
