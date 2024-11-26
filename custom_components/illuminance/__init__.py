@@ -22,7 +22,7 @@ from homeassistant.helpers.sun import get_astral_location
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
-from .sensor import ILLUMINANCE_SCHEMA
+from .sensor import ILLUMINANCE_SCHEMA, LOC_ELEV
 
 _ILLUMINANCE_SCHEMA = vol.Schema(
     ILLUMINANCE_SCHEMA
@@ -64,7 +64,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             """
             loc, elv = get_astral_location(hass)
             loc.tzinfo  # noqa: B018
-            hass.data[DOMAIN] = loc, elv
+            hass.data[LOC_ELEV] = loc, elv
 
         await hass.async_add_executor_job(get_loc_elev)
 
@@ -84,7 +84,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
                 tasks.append(hass.config_entries.async_remove(entry.entry_id))
 
         for conf in configs:
-            tasks.append(
+            tasks.append(  # noqa: PERF401
                 hass.config_entries.flow.async_init(
                     DOMAIN, context={"source": SOURCE_IMPORT}, data=conf.copy()
                 )

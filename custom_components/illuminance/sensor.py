@@ -21,7 +21,7 @@ import voluptuous as vol
 
 from homeassistant.components.sensor import (
     DOMAIN as SENSOR_DOMAIN,
-    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -57,7 +57,13 @@ from homeassistant.const import (
     STATE_UNKNOWN,
     UnitOfIrradiance,
 )
-from homeassistant.core import Event, HomeAssistant, State, callback
+from homeassistant.core import (
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    State,
+    callback,
+)
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
@@ -65,6 +71,7 @@ from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPla
 from homeassistant.helpers.event import async_track_state_change_event
 from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
 import homeassistant.util.dt as dt_util
+from homeassistant.util.hass_dict import HassKey
 
 from .const import (
     CONF_FALLBACK,
@@ -117,6 +124,8 @@ ECOBEE_MAPPING = (
 
 ADDITIONAL_MAPPINGS = ((AW_PATTERN, AW_MAPPING), (ECOBEE_PATTERN, ECOBEE_MAPPING))
 
+LOC_ELEV: HassKey[tuple[Location, Elevation]] = HassKey(DOMAIN)
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -139,7 +148,7 @@ ILLUMINANCE_SCHEMA = {
     vol.Optional(CONF_MODE, default=MODES[0]): vol.In(MODES),
     vol.Optional(CONF_FALLBACK): vol.All(vol.Coerce(float), vol.Range(1, 10)),
 }
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
+PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
 
 _20_MIN = timedelta(minutes=20)
 _40_MIN = timedelta(minutes=40)
@@ -170,7 +179,7 @@ def _sensor(
     )
     if (mode := Mode.__getitem__(cast(str, config[CONF_MODE]))) is Mode.irradiance:
         device_class = SensorDeviceClass.IRRADIANCE
-        native_unit_of_measurement = UnitOfIrradiance.WATTS_PER_SQUARE_METER
+        native_unit_of_measurement: str = UnitOfIrradiance.WATTS_PER_SQUARE_METER
         suggested_display_precision = 1
     else:
         device_class = SensorDeviceClass.ILLUMINANCE
@@ -314,7 +323,7 @@ class IlluminanceSensor(SensorEntity):
             return
 
         @callback
-        def sensor_state_listener(event: Event) -> None:
+        def sensor_state_listener(event: Event[EventStateChangedData]) -> None:
             """Process input entity state update."""
             new_state: State | None = event.data["new_state"]
             old_state: State | None = event.data["old_state"]
@@ -484,7 +493,7 @@ class IlluminanceSensor(SensorEntity):
 
     def _astral_event(self, event: str, date_or_dt: date | datetime) -> Any:
         """Get astral event."""
-        loc, elev = cast(tuple[Location, Elevation], self.hass.data[DOMAIN])
+        loc, elev = self.hass.data[LOC_ELEV]
         if event == "solar_elevation":
             return getattr(loc, event)(date_or_dt, observer_elevation=elev)
         return getattr(loc, event)(date_or_dt, local=False, observer_elevation=elev)
