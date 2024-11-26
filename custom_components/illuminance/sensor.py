@@ -20,7 +20,6 @@ from astral.location import Location
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    DOMAIN as SENSOR_DOMAIN,
     PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
@@ -50,7 +49,6 @@ from homeassistant.const import (
     CONF_ENTITY_ID,
     CONF_MODE,
     CONF_NAME,
-    CONF_PLATFORM,
     CONF_SCAN_INTERVAL,
     LIGHT_LUX,
     STATE_UNAVAILABLE,
@@ -69,7 +67,7 @@ from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
 from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
 import homeassistant.util.dt as dt_util
 from homeassistant.util.hass_dict import HassKey
 
@@ -167,11 +165,7 @@ class IlluminanceSensorEntityDescription(SensorEntityDescription):  # type: igno
     scan_interval: timedelta | None = None
 
 
-def _sensor(
-    config: ConfigType,
-    unique_id: str | None = None,
-    scan_interval: timedelta | None = None,
-) -> Entity:
+def _sensor(config: ConfigType, unique_id: str, scan_interval: timedelta) -> Entity:
     """Create entity to add."""
     weather_entity = config.get(CONF_ENTITY_ID)
     fallback = cast(
@@ -200,24 +194,6 @@ def _sensor(
     )
 
     return IlluminanceSensor(entity_description)
-
-
-async def async_setup_platform(
-    hass: HomeAssistant,
-    config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
-) -> None:
-    """Set up sensors."""
-    _LOGGER.warning(
-        "%s: %s under %s is deprecated. Move to %s:",
-        CONF_PLATFORM,
-        DOMAIN,
-        SENSOR_DOMAIN,
-        DOMAIN,
-    )
-
-    async_add_entities([_sensor(config)], True)
 
 
 async def async_setup_entry(

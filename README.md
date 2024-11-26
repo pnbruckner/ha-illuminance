@@ -76,7 +76,7 @@ After it has been downloaded you will need to restart Home Assistant.
 
 ### Versions
 
-This custom integration supports HomeAssistant versions 2023.4.0 or newer.
+This custom integration supports HomeAssistant versions 2024.8.3 or newer.
 
 ## Services
 
@@ -98,39 +98,6 @@ Key | Optional | Description
 `mode` | yes | Mode of operation. Choices are `normal` (default) which uses sun elevation, `simple` which uses time of day and `irradiance` which is the same as `normal`, except the value is expressed as irradiance in Watts/M².
 `name` | yes | Name of the sensor. Default is `Illuminance`.
 `scan_interval` | yes | Update interval. Minimum is 30 seconds. Default is 5 minutes.
-
-## Converting from `platform` configuration
-
-In previous versions, configuration was done under `sensor`.
-This is now deprecated and will generate a warning at startup.
-It should be converted to the new `illuminance` format as described above.
-Or simply remove it and add the sensor(s) via the UI.
-
-Here is an example of the old format:
-
-```yaml
-sensor:
-  - platform: illuminance
-    entity_id: weather.home_forecast
-    fallback: 5
-    mode: normal
-    name: Weather-Based Sun Illuminance
-    scan_interval:
-      minutes: 10
-```
-
-This is the equivalent configuration in the new format:
-
-```yaml
-illuminance:
-  - unique_id: 1
-    entity_id: weather.home_forecast
-    fallback: 5
-    mode: normal
-    name: Weather-Based Sun Illuminance
-    scan_interval:
-      minutes: 10
-```
 
 ## Releases Before 2.1.0
 See https://github.com/pnbruckner/homeassistant-config/blob/master/docs/illuminance.md.
