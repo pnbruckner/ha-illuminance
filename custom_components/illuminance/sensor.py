@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import Enum, IntEnum, auto
-from functools import cached_property
+from functools import cached_property  # pylint: disable=hass-deprecated-import
 import logging
 from math import asin, cos, exp, radians, sin
 import re
