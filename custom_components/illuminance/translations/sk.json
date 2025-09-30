@@ -1,0 +1,57 @@
+{
+    "title": "Osvetlenie",
+    "config": {
+        "step": {
+            "options": {
+                "title": "Možnosti osvetlenia",
+                "description": "Predvolený delič je 1 ak nie je vybratý žiadny zdroj údajov o počasí, a 10 ak je vybratý.",
+                "data": {
+                    "mode": "Režim",
+                    "entity_id": "Zdroj údajov o počasí",
+                    "scan_interval": "Perióda aktualizácie v minútach",
+                    "fallback": "Delič osvetlenia keď nie sú údaje o počasí"
+                }
+            },
+            "name": {
+                "title": "Názov",
+                "data": {
+                    "name": "Názov"
+                }
+            }
+        }
+    },
+    "device": {
+        "service": {
+            "name": "Osvetlenie"
+        }
+    },
+    "options": {
+        "step": {
+            "options": {
+                "title": "Možnosti osvetlenia",
+                "description": "Predvolený delič je 1 ak nie je vybratý žiadny zdroj údajov o počasí, a 10 ak je vybratý.",
+                "data": {
+                    "mode": "Režim",
+                    "entity_id": "Zdroj údajov o počasí",
+                    "scan_interval": "Perióda aktualizácie v minútach",
+                    "fallback": "Delič osvetlenia keď nie sú údaje o počasí"
+                }
+            }
+        }
+    },
+    "selector": {
+        "mode": {
+            "options": {
+                "normal": "Normálny",
+                "simple": "Jednoduchý",
+                "irradiance": "Ožiarenie"
+            }
+        }
+    },
+    "services": {
+        "reload": {
+            "name": "Znovu načítať",
+            "description": "Znovu načíta osvetlenie z YAML-konfigurácie."
+        }
+    }
+}
