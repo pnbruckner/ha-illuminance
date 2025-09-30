@@ -20,6 +20,11 @@
             }
         }
     },
+    "device": {
+        "service": {
+            "name": "Illuminance"
+        }
+    },
     "options": {
         "step": {
             "options": {

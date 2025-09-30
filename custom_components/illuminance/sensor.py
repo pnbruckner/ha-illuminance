@@ -9,7 +9,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from datetime import date, datetime, timedelta
 from enum import Enum, IntEnum, auto
-from functools import cached_property
+from functools import cached_property  # pylint: disable=hass-deprecated-import
 import logging
 from math import asin, cos, exp, radians, sin
 import re
@@ -20,8 +20,7 @@ from astral.location import Location
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
-    DOMAIN as SENSOR_DOMAIN,
-    PLATFORM_SCHEMA,
+    PLATFORM_SCHEMA as SENSOR_PLATFORM_SCHEMA,
     SensorDeviceClass,
     SensorEntity,
     SensorEntityDescription,
@@ -50,28 +49,27 @@ from homeassistant.const import (
     CONF_ENTITY_ID,
     CONF_MODE,
     CONF_NAME,
-    CONF_PLATFORM,
     CONF_SCAN_INTERVAL,
     LIGHT_LUX,
     STATE_UNAVAILABLE,
     STATE_UNKNOWN,
     UnitOfIrradiance,
 )
-from homeassistant.core import Event, HomeAssistant, State, callback
+from homeassistant.core import (
+    Event,
+    EventStateChangedData,
+    HomeAssistant,
+    State,
+    callback,
+)
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.device_registry import DeviceEntryType
-
-# Device Info moved to device_registry in 2023.9
-try:
-    from homeassistant.helpers.device_registry import DeviceInfo
-except ImportError:
-    from homeassistant.helpers.entity import DeviceInfo  # type: ignore[attr-defined]
-
+from homeassistant.helpers.device_registry import DeviceEntryType, DeviceInfo
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback, EntityPlatform
 from homeassistant.helpers.event import async_track_state_change_event
-from homeassistant.helpers.typing import ConfigType, DiscoveryInfoType
+from homeassistant.helpers.typing import ConfigType
 import homeassistant.util.dt as dt_util
+from homeassistant.util.hass_dict import HassKey
 
 from .const import (
     CONF_FALLBACK,
@@ -124,6 +122,8 @@ ECOBEE_MAPPING = (
 
 ADDITIONAL_MAPPINGS = ((AW_PATTERN, AW_MAPPING), (ECOBEE_PATTERN, ECOBEE_MAPPING))
 
+LOC_ELEV: HassKey[tuple[Location, Elevation]] = HassKey(DOMAIN)
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -146,7 +146,7 @@ ILLUMINANCE_SCHEMA = {
     vol.Optional(CONF_MODE, default=MODES[0]): vol.In(MODES),
     vol.Optional(CONF_FALLBACK): vol.All(vol.Coerce(float), vol.Range(1, 10)),
 }
-PLATFORM_SCHEMA = PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
+PLATFORM_SCHEMA = SENSOR_PLATFORM_SCHEMA.extend(ILLUMINANCE_SCHEMA)
 
 _20_MIN = timedelta(minutes=20)
 _40_MIN = timedelta(minutes=40)
@@ -165,11 +165,7 @@ class IlluminanceSensorEntityDescription(SensorEntityDescription):  # type: igno
     scan_interval: timedelta | None = None
 
 
-def _sensor(
-    config: ConfigType,
-    unique_id: str | None = None,
-    scan_interval: timedelta | None = None,
-) -> Entity:
+def _sensor(config: ConfigType, unique_id: str, scan_interval: timedelta) -> Entity:
     """Create entity to add."""
     weather_entity = config.get(CONF_ENTITY_ID)
     fallback = cast(
@@ -177,7 +173,7 @@ def _sensor(
     )
     if (mode := Mode.__getitem__(cast(str, config[CONF_MODE]))) is Mode.irradiance:
         device_class = SensorDeviceClass.IRRADIANCE
-        native_unit_of_measurement = UnitOfIrradiance.WATTS_PER_SQUARE_METER
+        native_unit_of_measurement: str = UnitOfIrradiance.WATTS_PER_SQUARE_METER
         suggested_display_precision = 1
     else:
         device_class = SensorDeviceClass.ILLUMINANCE
@@ -198,24 +194,6 @@ def _sensor(
     )
 
     return IlluminanceSensor(entity_description)
-
-
-async def async_setup_platform(
-    hass: HomeAssistant,
-    config: ConfigType,
-    async_add_entities: AddEntitiesCallback,
-    discovery_info: DiscoveryInfoType | None = None,
-) -> None:
-    """Set up sensors."""
-    _LOGGER.warning(
-        "%s: %s under %s is deprecated. Move to %s:",
-        CONF_PLATFORM,
-        DOMAIN,
-        SENSOR_DOMAIN,
-        DOMAIN,
-    )
-
-    async_add_entities([_sensor(config)], True)
 
 
 async def async_setup_entry(
@@ -264,7 +242,7 @@ class IlluminanceSensor(SensorEntity):
     _attr_device_info = DeviceInfo(
         entry_type=DeviceEntryType.SERVICE,
         identifiers={(DOMAIN, DOMAIN)},
-        name=DOMAIN.title(),
+        translation_key="service",
     )
     _entity_status = EntityStatus.NOT_SEEN
     _sk_mapping: Sequence[tuple[Num, Sequence[str]]] | None = None
@@ -321,7 +299,7 @@ class IlluminanceSensor(SensorEntity):
             return
 
         @callback
-        def sensor_state_listener(event: Event) -> None:
+        def sensor_state_listener(event: Event[EventStateChangedData]) -> None:
             """Process input entity state update."""
             new_state: State | None = event.data["new_state"]
             old_state: State | None = event.data["old_state"]
@@ -491,7 +469,7 @@ class IlluminanceSensor(SensorEntity):
 
     def _astral_event(self, event: str, date_or_dt: date | datetime) -> Any:
         """Get astral event."""
-        loc, elev = cast(tuple[Location, Elevation], self.hass.data[DOMAIN])
+        loc, elev = self.hass.data[LOC_ELEV]
         if event == "solar_elevation":
             return getattr(loc, event)(date_or_dt, observer_elevation=elev)
         return getattr(loc, event)(date_or_dt, local=False, observer_elevation=elev)
