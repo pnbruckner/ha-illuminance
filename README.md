@@ -1,3 +1,35 @@
+
+<div align="right">
+  <details>
+    <summary >🌐 Language</summary>
+    <div>
+      <div align="center">
+        <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=en">English</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=zh-CN">简体中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=zh-TW">繁體中文</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=ja">日本語</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=ko">한국어</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=hi">हिन्दी</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=th">ไทย</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=fr">Français</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=de">Deutsch</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=es">Español</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=it">Italiano</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=ru">Русский</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=pt">Português</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=nl">Nederlands</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=pl">Polski</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=ar">العربية</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=fa">فارسی</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=tr">Türkçe</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=vi">Tiếng Việt</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=id">Bahasa Indonesia</a>
+        | <a href="https://openaitx.github.io/view.html?user=pnbruckner&project=ha-illuminance&lang=as">অসমীয়া</
+      </div>
+    </div>
+  </details>
+</div>
+
 # <img src="https://brands.home-assistant.io/illuminance/icon.png" alt="Sun2 Sensor" width="50" height="50"/> Illuminance Sensor
 Creates a `sensor` entity that estimates outdoor illuminance based on either sun elevation or time of day.
 In either case, the value can be further adjusted based on current weather conditions or cloud coverage obtained from another, existing entity.
