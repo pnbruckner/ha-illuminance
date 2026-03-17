@@ -80,7 +80,8 @@ class IlluminanceFlow(ConfigEntryBaseFlow):
                     )
                 ),
                 vol.Optional(CONF_PRECISION): NumberSelector(
-                   NumberSelectorConfig(min=0, max=10, step=1, mode=NumberSelectorMode.BOX)
+                   NumberSelectorConfig(
+                       min=0, max=10, step=1, mode=NumberSelectorMode.BOX)
                 ),
             }
         )
