@@ -12,3 +12,5 @@ DEFAULT_FALLBACK = 10
 LUX_PER_WPSM = 120
 
 CONF_FALLBACK = "fallback"
+#add precision / rounding toggle
+CONF_PRECISION = "precision"
