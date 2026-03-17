@@ -336,9 +336,13 @@ class IlluminanceSensor(SensorEntity):
         if self.mode is Mode.irradiance:
             value /= LUX_PER_WPSM
 
+        
         # Calculate final value.
-
-        self._attr_native_value = value / self._sk
+        # We round to 0 decimal places for Illuminance to prevent jitter.
+        if self.mode is Mode.irradiance:
+            self._attr_native_value = value / self._sk
+        else:
+            self._attr_native_value = round(value / self._sk)
         display_precision = self._sensor_option_display_precision or 0
         _LOGGER.debug(
             "%s: Updating %s -> %s / %0.2f = %s",
