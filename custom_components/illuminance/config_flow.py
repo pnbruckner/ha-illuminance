@@ -79,6 +79,9 @@ class IlluminanceFlow(ConfigEntryBaseFlow):
                         min=1, max=10, step="any", mode=NumberSelectorMode.BOX
                     )
                 ),
+                vol.Optional(CONF_PRECISION): NumberSelector(
+                   NumberSelectorConfig(min=0, max=10, step=1, mode=NumberSelectorMode.BOX)
+                ),
             }
         )
         data_schema = self.add_suggested_values_to_schema(
@@ -88,6 +91,7 @@ class IlluminanceFlow(ConfigEntryBaseFlow):
                 CONF_SCAN_INTERVAL: self.options.get(
                     CONF_SCAN_INTERVAL, DEFAULT_SCAN_INTERVAL_MIN
                 ),
+                CONF_PRECISION: self.options.get(CONF_PRECISION, 0),
             },
         )
         if (entity_id := self.options.get(CONF_ENTITY_ID)) is not None:
