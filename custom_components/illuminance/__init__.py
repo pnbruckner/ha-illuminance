@@ -18,7 +18,7 @@ from homeassistant.core import Event, HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.sun import get_astral_location
+from homeassistant.helpers.sun import get_astral_observer
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
@@ -59,7 +59,7 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
             its file I/O that it does when it sees a new time zone. This needs to be
             done in an executor.
             """
-            loc, elv = get_astral_location(hass)
+            loc, elv = get_astral_observer(hass)
             loc.tzinfo  # noqa: B018
             hass.data[LOC_ELEV] = loc, elv
 
