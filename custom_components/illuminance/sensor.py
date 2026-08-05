@@ -15,8 +15,8 @@ from math import asin, cos, exp, radians, sin
 import re
 from typing import Any, cast
 
-from astral import Elevation
-from astral.location import Location
+import astral.sun
+from astral import Observer
 import voluptuous as vol
 
 from homeassistant.components.sensor import (
@@ -118,7 +118,7 @@ ECOBEE_MAPPING = (
 
 ADDITIONAL_MAPPINGS = ((AW_PATTERN, AW_MAPPING), (ECOBEE_PATTERN, ECOBEE_MAPPING))
 
-LOC_ELEV: HassKey[tuple[Location, Elevation]] = HassKey(DOMAIN)
+LOC_ELEV: HassKey[Observer] = HassKey(DOMAIN)
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -456,10 +456,12 @@ class IlluminanceSensor(SensorEntity):
 
     def _astral_event(self, event: str, date_or_dt: date | datetime) -> Any:
         """Get astral event."""
-        loc, elev = self.hass.data[LOC_ELEV]
+        observer = self.hass.data[LOC_ELEV]
         if event == "solar_elevation":
-            return getattr(loc, event)(date_or_dt, observer_elevation=elev)
-        return getattr(loc, event)(date_or_dt, local=False, observer_elevation=elev)
+            return astral.sun.elevation(observer, date_or_dt)
+        if event == "sunrise":
+            return astral.sun.sunrise(observer, date_or_dt)
+        return astral.sun.sunset(observer, date_or_dt)
 
     def _sun_factor(self, now: datetime) -> Num:
         """Calculate sun factor."""
