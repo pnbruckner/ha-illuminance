@@ -18,7 +18,7 @@ from homeassistant.core import Event, HomeAssistant, ServiceCall
 from homeassistant.helpers import config_validation as cv, device_registry as dr
 from homeassistant.helpers.reload import async_integration_yaml_config
 from homeassistant.helpers.service import async_register_admin_service
-from homeassistant.helpers.sun import get_astral_location
+from homeassistant.helpers.sun import get_astral_observer
 from homeassistant.helpers.typing import ConfigType
 
 from .const import DOMAIN
@@ -48,22 +48,10 @@ async def async_setup(hass: HomeAssistant, config: ConfigType) -> bool:
         dev_reg.async_remove_device(device.id)
 
     async def async_get_loc_elev(event: Event | None = None) -> None:
-        """Get HA Location object & elevation."""
+        """Get astral observer for current HA configuration."""
         if event is not None and not event.data:
             return
-
-        def get_loc_elev() -> None:
-            """Get HA Location object & elevation.
-
-            Then get Location's tzinfo to force pytz, which it calls indirectly, to do
-            its file I/O that it does when it sees a new time zone. This needs to be
-            done in an executor.
-            """
-            loc, elv = get_astral_location(hass)
-            loc.tzinfo  # noqa: B018
-            hass.data[LOC_ELEV] = loc, elv
-
-        await hass.async_add_executor_job(get_loc_elev)
+        hass.data[LOC_ELEV] = get_astral_observer(hass)
 
     async def process_config(
         config: ConfigType | None, run_immediately: bool = True
